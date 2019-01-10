@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Vara.js</title>
+	<style>
+	*{
+		margin:0;
+		padding:0;
+	}
+	#container{
+		width:60%;
+		margin:20px auto;
+	}
+	</style>
+</head>
+<body>
+	<div id="container"></div>
+	<script src="./src/vara.min.js" type="text/javascript"></script>
+	<script>
+		var vara = new Vara("#container","./fonts/Satisfy/SatisfySL.json",[{
+				text:"Vara.js",
+				textAlign:"center",
+				strokeWidth:2.5,
+				y:80,
+				duration:1500
+			},{
+				text:"A red flare silhouetted the jagged edge of a wing.",
+				width:500,
+				strokeWidth:2.5,
+				y:40,
+				x:80,
+				duration:4000
+			},{
+				text:"Sphinx of black quartz, judge my vow.",
+				strokeWidth:2,
+				color:"blue",
+				id:"sphinx",
+				autoAnimation:true,
+				x:80,
+				duration:4500
+			}],{
+				fontSize:46
+			});
+	</script>
+</body>
+</html>

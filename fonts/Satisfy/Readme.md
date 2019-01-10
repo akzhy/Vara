@@ -1,0 +1,1 @@
+License Information: https://github.com/google/fonts/blob/master/apache/satisfy/LICENSE.txt
