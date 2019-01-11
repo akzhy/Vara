@@ -200,7 +200,7 @@ Vara.prototype.createText = function(){
 			this.setPosition(fg,{x:alignX,y:lhi+this.contents.p.tf*fontSize - largestHeight});
 			// Increment line position as each line is created.
 			lhi+= lineHeight*fontSize;
-			ph+=this.contents.p.tf*fontSize+(this.contents.p.tf*fontSize - lFH);
+			ph+=this.contents.p.tf*fontSize+(this.contents.p.tf*fontSize - lFH*fontSize);
 		}
 		if(this.texts[j].y == undefined || this.texts[j].fromCurrentPosition.y == true){
 			this.setPosition(outerLayer,{y:lho});
