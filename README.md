@@ -49,6 +49,7 @@ new Vara("#container","font.json",[
 	},
 	autoAnimation:true, // Boolean, Whether to animate the text automatically
 	queued:true, // Boolean, Whether the animation should be in a queue
+	delay:0,     // Delay before the animation starts in milliseconds
 	letterSpacing:0 // Number, space between each character
 }],{
 	// The options given below will be applicable to every text created,
