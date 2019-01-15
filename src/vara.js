@@ -200,7 +200,7 @@ Vara.prototype.createText = function(){
 			this.setPosition(fg,{x:alignX,y:lhi+this.contents.p.tf*fontSize - largestHeight});
 			// Increment line position as each line is created.
 			lhi+= lineHeight*fontSize;
-			ph+=this.contents.p.tf*fontSize+(this.contents.p.tf*fontSize - lFH*fontSize);
+			ph+=this.contents.p.tf*fontSize+(this.contents.p.tf*fontSize - lFH);
 		}
 		if(this.texts[j].y == undefined || this.texts[j].fromCurrentPosition.y == true){
 			this.setPosition(outerLayer,{y:lho});
@@ -363,7 +363,9 @@ Vara.prototype.analyseWidth = function(){
 			var text = textArray[x];
 			for(var i =0;i<text.length;i++){
 				if(this.characters[text[i].charCodeAt(0)] != undefined){
-					increment = this.characters[text[i].charCodeAt(0)].w * scale + this.texts[j].letterSpacing;
+					increment = this.characters[text[i].charCodeAt(0)].w * scale;
+					if(increment < this.texts[j].minWidth) increment+=2*(this.texts[j].minWidth-this.characters[text[i].charCodeAt(0)].w);
+					increment+= this.texts[j].letterSpacing;
 				}else{
 					if(text[i] == " ") increment = this.space.w * scale;
 					else increment = this.questionMark.w * scale + this.texts[j].letterSpacing;
