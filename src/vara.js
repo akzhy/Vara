@@ -129,7 +129,7 @@ Vara.prototype.createText = function(){
 		var drawnPart = [];
 		var lhi = 0;
 		fontSize = this.texts[j].fontSize;
-		var bsw = this.texts[j].strokeWidth == undefined ? (this.properties.strokeWidth == undefined ? this.contents.p.bsw : this.properties.strokeWidth) : this.texts[j].strokeWidth;
+		var bsw = this.texts[j].strokeWidth;
 		var color = this.texts[j].color == undefined ? (this.properties.color == undefined ? "black" : this.properties.color) :this.texts[j].color;
 		var duration = this.texts[j].duration == undefined ? this.properties.duration == undefined ? 2000 : this.properties.duration : this.texts[j].duration;
 		var id = this.texts[j].id == undefined ? j : this.texts[j].id;
@@ -336,6 +336,7 @@ Vara.prototype.analyseWidth = function(){
 		else textArray = textObj.text;
 		this.texts[j].text = textArray;
 		this.texts[j].letterSpacing = this.texts[j].letterSpacing == undefined ? this.properties.letterSpacing == undefined ? 0 : this.properties.letterSpacing : this.texts[j].letterSpacing;
+		this.texts[j].strokeWidth = this.texts[j].strokeWidth == undefined ? (this.properties.strokeWidth == undefined ? this.contents.p.bsw : this.properties.strokeWidth) : this.texts[j].strokeWidth;
 		// Whether to break the word on overflow.
 		var breakWord = this.texts[j].breakWord == undefined ? this.properties.breakWord == undefined ? false : this.properties.breakWord : this.texts[j].breakWord; 
 		var originalBreakWord = breakWord;
@@ -370,6 +371,8 @@ Vara.prototype.analyseWidth = function(){
 					if(text[i] == " ") increment = this.space.w * scale;
 					else increment = this.questionMark.w * scale + this.texts[j].letterSpacing;
 				}
+				increment+= this.texts[j].strokeWidth;
+				//console.log(this.texts[j].strokeWidth*i*scale,this.texts[j].strokeWidth*i/2)
 				if(lWidth+increment > canvasWidth){
 					if(increment > canvasWidth) breakWord = true;
 					var pos = i;
