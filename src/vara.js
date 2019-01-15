@@ -19,6 +19,9 @@ Vara = function(elem,fontSource,text,properties){
 	this.ready = function(f){
 		_this.readyF = f;
 	}
+	this.animationEnd = function(f){
+		_this.animationEndF = f;
+	}
 
 	this.svg = this.createNode("svg",{
 		width:"100%"
@@ -133,6 +136,9 @@ Vara.prototype.createText = function(){
 		var color = this.texts[j].color == undefined ? (this.properties.color == undefined ? "black" : this.properties.color) :this.texts[j].color;
 		var duration = this.texts[j].duration == undefined ? this.properties.duration == undefined ? 2000 : this.properties.duration : this.texts[j].duration;
 		var id = this.texts[j].id == undefined ? j : this.texts[j].id;
+		this.texts[j].delay = this.texts[j].delay == undefined ? 0 : this.texts[j].delay;
+		this.prevDuration+= this.texts[j].delay;
+		console.log(this.texts[j].delay);
 		/* If the y coordinate of the paragraph is given and the property `fromCurrentPosition` is set to false then the text is drawn at the 	 absolute position given.
 		   If the y coordinate of the paragraph is given and the property `fromCurrentPosition` is not set or set to true then the text is drawn relative to the previous element. That is if the y values is given as 50, then the element will be created 50px below the previous one.
 		*/
@@ -214,7 +220,9 @@ Vara.prototype.createText = function(){
 		this.drawnCharacters[id] = {characters:drawnPart,queued:this.texts[j].queued,container:outerLayer};
 		if(this.texts[j].autoAnimation == undefined || this.texts[j].autoAnimation){
 			_this.draw(id,duration);
-			if(this.texts[j].queued == undefined || this.texts[j].queued) _this.prevDuration+= duration;
+			if(this.texts[j].queued == undefined || this.texts[j].queued){
+				_this.prevDuration+= duration;
+			}
 		}
 	}
 	this.completed = true;
@@ -250,6 +258,9 @@ Vara.prototype.draw = function(id,duration){
 				delay+= currentDuration;
 			})
 		})
+		setTimeout(function(){
+			if(_this.animationEndF){_this.animationEndF(id,_this.drawnCharacters[id])}
+		},delay)
 	},timeOut);
 
 }
@@ -261,7 +272,6 @@ Vara.prototype.get = function(id){
 		return false;
 	}
 	return this.drawnCharacters[id];
-	//return this.drawnCharacters[id];
 }
 /**
 * Handles animation of the stroke dashoffset
@@ -371,8 +381,7 @@ Vara.prototype.analyseWidth = function(){
 					if(text[i] == " ") increment = this.space.w * scale;
 					else increment = this.questionMark.w * scale + this.texts[j].letterSpacing;
 				}
-				increment+= this.texts[j].strokeWidth;
-				//console.log(this.texts[j].strokeWidth*i*scale,this.texts[j].strokeWidth*i/2)
+				increment+= this.texts[j].strokeWidth*scale;
 				if(lWidth+increment > canvasWidth){
 					if(increment > canvasWidth) breakWord = true;
 					var pos = i;
