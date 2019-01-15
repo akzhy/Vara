@@ -226,7 +226,7 @@ Vara.prototype.createText = function(){
 		}
 	}
 	this.completed = true;
-	this.svg.style.height = this.svg.getBBox().height+this.svg.getBBox().y+10;
+	this.svg.setAttribute("height",this.svg.getBBox().height+this.svg.getBBox().y+10);
 	if(this.readyF) this.readyF();
 }
 
