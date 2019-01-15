@@ -66,21 +66,36 @@ new Vara("#container","font.json",[
 
 ## Methods
 
-.ready(function)
+`.ready(function)`
+
+----
 
 Is used to execute a function when the font is loaded and the elements are created.
 
 Any other method should be called inside the function
 
-.get(id)
+`.get(id)`
+
+----
 
 If an id was given to the text during creation, it should be given as the argument. Otherwise use the index of the text block.
 Returns an object with properties characters and container.
 characters is an array of svg g elements, each representing a letter
 and container is an svg g wrapping the text block.
 
-.draw(id)
+`.draw(id)`
+
+-----
 
 Used to animate texts with autoAnimation:false
 If an id was given to the text during creation, it should be given as the argument. Otherwise use the index of the text block.
+
+`.animationEnd(function(i,o){})`
+
+----
+
+Used to execute a function once animation ends, triggers every time a block of text is drawn.
+Has two arguments, `i` - The id of the drawn text,
+`o` An object containing the `group` DOM object.
+
 
