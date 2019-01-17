@@ -124,6 +124,7 @@ Vara.prototype.createText = function(){
 	var fontSize;
 	// if lineHeight is provided for a specfic paragraph, then it will be used. If it is not specified then the global 'properties' object is searched for lineHeight, if it is provided then it will be used. Otherwise the default lineHeight provided in the JSON font object will be used.
 	var lineHeight = this.properties.lineHeight == undefined ? this.contents.p.lh : this.properties.lineHeight;
+	this.properties.autoAnimation = this.properties.autoAnimation == undefined ? true : this.properties.autoAnimation;
 	var prevOuterHeight = 0;
 	var prevDuration = 0;
 	// incrementOuterHeight determines whether to add new paragraphs below the previous paragraph.
@@ -135,10 +136,10 @@ Vara.prototype.createText = function(){
 		var bsw = this.texts[j].strokeWidth;
 		var color = this.texts[j].color == undefined ? (this.properties.color == undefined ? "black" : this.properties.color) :this.texts[j].color;
 		var duration = this.texts[j].duration == undefined ? this.properties.duration == undefined ? 2000 : this.properties.duration : this.texts[j].duration;
+		this.texts[j].duration = duration;
 		var id = this.texts[j].id == undefined ? j : this.texts[j].id;
 		this.texts[j].delay = this.texts[j].delay == undefined ? 0 : this.texts[j].delay;
 		this.prevDuration+= this.texts[j].delay;
-		console.log(this.texts[j].delay);
 		/* If the y coordinate of the paragraph is given and the property `fromCurrentPosition` is set to false then the text is drawn at the 	 absolute position given.
 		   If the y coordinate of the paragraph is given and the property `fromCurrentPosition` is not set or set to true then the text is drawn relative to the previous element. That is if the y values is given as 50, then the element will be created 50px below the previous one.
 		*/
@@ -218,7 +219,7 @@ Vara.prototype.createText = function(){
 		if(incrementOuterHeight) prevOuterHeight+= ph; 
 		if(this.drawnCharacters[id] != undefined) id = j;
 		this.drawnCharacters[id] = {characters:drawnPart,queued:this.texts[j].queued,container:outerLayer};
-		if(this.texts[j].autoAnimation == undefined || this.texts[j].autoAnimation){
+		if((this.texts[j].autoAnimation == undefined || this.texts[j].autoAnimation) && (this.properties.autoAnimation)){
 			_this.draw(id,duration);
 			if(this.texts[j].queued == undefined || this.texts[j].queued){
 				_this.prevDuration+= duration;
@@ -228,6 +229,19 @@ Vara.prototype.createText = function(){
 	this.completed = true;
 	this.svg.setAttribute("height",this.svg.getBBox().height+this.svg.getBBox().y+10);
 	if(this.readyF) this.readyF();
+}
+
+Vara.prototype.playAll = function(){
+	this.prevDuration = 0;
+	for(var j=0;j<this.texts.length;j++){
+		var duration = this.texts[j].duration;
+		var id = this.texts[j].id == undefined ? j : this.texts[j].id;
+		this.prevDuration+= this.texts[j].delay;
+		this.draw(id,duration);
+		if(this.texts[j].queued == undefined || this.texts[j].queued){
+			this.prevDuration+= duration;
+		}
+	}
 }
 
 /**
@@ -357,7 +371,7 @@ Vara.prototype.analyseWidth = function(){
 		this.texts[j].minWidth = dot.getBoundingClientRect().width;
 
 		// if a width is specified, overflow, textAlign and other properties will be calculated with respect to the given width. Otherwise the width of the SVG element will be used.
-		var canvasWidth = this.texts[j].width == undefined ? canvasOriginalWidth+15 : this.texts[j].width;
+		var canvasWidth = this.texts[j].width == undefined ? canvasOriginalWidth : this.texts[j].width;
 		var bp1 = [];
 		var increment;
 		var inx = this.texts[j].x == undefined ? 0 : this.texts[j].x;
@@ -369,30 +383,33 @@ Vara.prototype.analyseWidth = function(){
 		breakPoints represents the indices where a new line appears.
 		*/
 		for(var x=0;x<textArray.length;x++){
-			var lWidth = inx;
+			var lWidth = inx*scale;
 			var bp2 = [];
 			var text = textArray[x];
+			var lastSpace = 0;
 			for(var i =0;i<text.length;i++){
 				if(this.characters[text[i].charCodeAt(0)] != undefined){
 					increment = this.characters[text[i].charCodeAt(0)].w * scale;
-					if(increment < this.texts[j].minWidth) increment+=2*(this.texts[j].minWidth-this.characters[text[i].charCodeAt(0)].w);
+					if(increment < this.texts[j].minWidth) increment+=scale*(this.texts[j].minWidth-this.characters[text[i].charCodeAt(0)].w)/2;
 					increment+= this.texts[j].letterSpacing;
 				}else{
-					if(text[i] == " ") increment = this.space.w * scale;
+					if(text[i] == " ") {increment = this.space.w * scale;lastSpace=lWidth;}
 					else increment = this.questionMark.w * scale + this.texts[j].letterSpacing;
 				}
 				increment+= this.texts[j].strokeWidth*scale;
-				if(lWidth+increment > canvasWidth){
-					if(increment > canvasWidth) breakWord = true;
+				if(lWidth+increment >= canvasWidth){
+					if(lastSpace == 0) breakWord = true;
 					var pos = i;
 					if(text[i] != " " && !breakWord){
 						pos = text.slice(0, pos + 1).search(/\S+$/);
 					}
 					bp2.push(pos);
-					lWidth = increment;
+					lWidth = inx*scale + lWidth-lastSpace;
+				}else{
+					width+= increment;
+					lWidth+= increment;
 				}
-				width+= increment;
-				lWidth+= increment;
+				
 			}
 			bp1.push(bp2);
 		}
