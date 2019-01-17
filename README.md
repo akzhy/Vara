@@ -1,6 +1,6 @@
 ![](vara.gif)
 # Vara
-![](https://img.shields.io/badge/Vara.js-1.0.1-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg)
+![](https://img.shields.io/badge/Vara.js-1.1.0-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg)
 
 Vara is a javascript library that can create text drawing animations
 
