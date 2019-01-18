@@ -4,7 +4,7 @@
 
 Vara is a javascript library that can create text drawing animations
 
-#### [Website](http://vara.akzhy.com) | [Examples](http://vara.akzhy.com/examples)
+#### [Website](http://vara.akzhy.com) | [Examples](http://vara.akzhy.com/examples) | [Codepen 1](https://codepen.io/akzhy/pen/YdbYbj) | [Codepen 2](https://codepen.io/akzhy/pen/OrdYGO)
 
 
 ## Installation and Basic usage
