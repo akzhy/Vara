@@ -109,5 +109,6 @@ If you find an issue or a bug or want to suggest a new feature, you can
 * [Contact me through my webpage](http://www.akzhy.com/contact/)
 * [Contact by Email](mailto:hi@akzhy.com)
 * [Comment on relevant page](http://vara.akzhy.com/)
+* [Contact through twitter](https://twitter.com/_akzhy)
 
 If you would like to have a specific font created, you can mail me with the details and i will try to create it, if the font have a suitable license.
