@@ -1,6 +1,6 @@
 ![](vara.gif)
-# Vara
-![](https://img.shields.io/badge/Vara.js-1.1.0-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg)
+# Vara 
+![](https://img.shields.io/badge/Vara.js-1.1.0-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg) [![Paypal Donate](https://img.shields.io/badge/Donate-paypal-9c27b0.svg)](https://www.paypal.me/akzhy/10)
 
 Vara is a javascript library that can create text drawing animations
 
@@ -70,37 +70,42 @@ new Vara("#container","font.json",[
 
 ## Methods
 
-`.ready(function)`
-
-----
-
+#### `.ready(function)`
 Is used to execute a function when the font is loaded and the elements are created.
 
-Any other method should be called inside the function
-
-`.get(id)`
+**Any other method should be called inside this function.**
 
 ----
 
-If an id was given to the text during creation, it should be given as the argument. Otherwise use the index of the text block.
-Returns an object with properties characters and container.
-characters is an array of svg g elements, each representing a letter
-and container is an svg g wrapping the text block.
+#### `.get(id)`
+Returns an object with properties `characters` and `container`.
 
-`.draw(id)`
-
------
-
-Used to animate texts with autoAnimation:false
-If an id was given to the text during creation, it should be given as the argument. Otherwise use the index of the text block.
-
-`.animationEnd(function(i,o){})`
+`characters` is an array of svg `g` elements, each representing a letter and container is an svg `g` wrapping the text block.
+If an id was given to the text during creation, it should be given as the argument, otherwise use the index of the text block.
 
 ----
 
+#### `.draw(id)`
+Used to animate texts with `autoAnimation:false`.
+
+If an `id` was given to the text during creation it should be given as the argument, otherwise use the index of the text block.
+
+----
+
+#### `.animationEnd(function(i,o){})`
 Used to execute a function once animation ends, triggers every time a block of text is drawn.
-Has two arguments, `i` - The id of the drawn text,
-`o` An object containing the `group` DOM object.
+Has two arguments,
+
+`i` - The id of the drawn text.
+
+`o` - The object described in the `get()` method.
+
+----
+
+#### `.playAll()`
+*Introduced in v1.1.0*
+
+Is used to play the animation of every text block, obeying `delay` and `queue`
 
 
 ## Contact
