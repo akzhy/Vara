@@ -1,6 +1,6 @@
 ![](vara.gif)
 # Vara 
-![](https://img.shields.io/badge/Vara.js-1.1.0-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg) [![Paypal Donate](https://img.shields.io/badge/Donate-paypal-9c27b0.svg)](https://www.paypal.me/akzhy/10)
+![](https://img.shields.io/badge/Vara.js-1.1.3-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg) [![Paypal Donate](https://img.shields.io/badge/Donate-paypal-9c27b0.svg)](https://www.paypal.me/akzhy/10)
 
 Vara is a javascript library that can create text drawing animations
 
@@ -9,7 +9,13 @@ Vara is a javascript library that can create text drawing animations
 
 ## Installation and Basic usage
 
-Include the library as follows
+**Using NPM**
+
+```
+npm install vara --save
+```
+
+Or download and include the library as follows
 
 ```html
 <script src="./src/vara.min.js" type="text/javascript"></script>
