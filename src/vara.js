@@ -269,7 +269,8 @@ Vara.prototype.createText = function() {
         this.drawnCharacters[id] = {
             characters: drawnPart,
             queued: this.texts[j].queued,
-            container: outerLayer
+            container: outerLayer,
+            index:j
         };
         if ((this.texts[j].autoAnimation == undefined || this.texts[j].autoAnimation) && (this.properties.autoAnimation)) {
             _this.draw(id, duration);
@@ -301,7 +302,7 @@ Vara.prototype.playAll = function() {
  * @param {int} id index or id of the paragraph to be animated.
  * @param {int} duration Duration of the animation in milliseconds
  */
-Vara.prototype.draw = function(id, duration) {
+Vara.prototype.draw = function(id, dur) {
     /*
     This will iterate through each character, finds its path length and the total duration is divided with respect to its path length.
     */
@@ -311,6 +312,7 @@ Vara.prototype.draw = function(id, duration) {
         console.trace();
         return;
     }
+    var duration = dur === undefined ? this.texts[this.drawnCharacters[id].index].duration : dur;
     var pathLength = this.getSectionPathLength(id);
     var delay = 0;
     var queued = this.drawnCharacters[id].queued == undefined ? true : this.drawnCharacters[id].queued;
@@ -332,6 +334,7 @@ Vara.prototype.draw = function(id, duration) {
     }, timeOut);
 
 }
+
 Vara.prototype.get = function(id) {
     var _this = this;
     if (this.drawnCharacters[id] == undefined) {
@@ -508,5 +511,5 @@ Vara.prototype.setPosition = function(e, obj, relative) {
 if (typeof module !== 'undefined') {
   module.exports = Vara;
 } else {
-  window.MoveTo = Vara;
+  window.Vara = Vara;
 }
