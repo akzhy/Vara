@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.4
+* Fixed issue with `.draw()` method.
+
+## v1.1.3
+* Added npm package
+* Bug fixes
+
 ## v1.1.0
 
 * Fixed bugs
