@@ -113,6 +113,14 @@ Has two arguments,
 
 Is used to play the animation of every text block, obeying `delay` and `queue`
 
+## Sponsors
+
+Browser testing provided by 
+
+<a href="http://browserstack.com/" title="Browserstack">
+	<img src="./browserstack.png" width="240" alt="Browserstack Logo"/>
+</a>
+
 
 ## Contact
 If you find an issue or a bug or want to suggest a new feature, you can
