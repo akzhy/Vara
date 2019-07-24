@@ -187,7 +187,9 @@ Vara.prototype.createText = function() {
         lineHeight = this.texts[j].lineHeight == undefined ? lineHeight : (this.texts[j].lineHeight / fontSize);
         // outerLayer is used to contain the entire paragraph.
         var outerLayer = this.createNode("g", {
-            transform: "translate(0,0)"
+			class: 'outer',
+            transform: "translate(0,0)",
+			'data-text':this.texts[j].text
         });
         containerGroup.appendChild(outerLayer);
         lho = prevOuterHeight;
@@ -320,7 +322,7 @@ Vara.prototype.draw = function(id, dur) {
     setTimeout(function() {
         _this.drawnCharacters[id].characters.forEach(function(i) {
             i.querySelectorAll("path").forEach(function(j) {
-                var currentDuration = (j.style.strokeDashoffset / pathLength) * duration;
+                var currentDuration = (parseFloat(j.style.strokeDashoffset) / pathLength) * duration;
                 j.style.opacity = 1;
                 _this.animate(j, currentDuration, delay, 0);
                 delay += currentDuration;
@@ -356,7 +358,7 @@ Vara.prototype.animate = function(elem, duration, delay, final) {
     final = Number(final) || 0;
     setTimeout(function() {
         var start = new Date().getTime();
-        var initial = Number(elem.style.strokeDashoffset);
+        var initial = parseFloat(elem.style.strokeDashoffset);
         var timer = setInterval(function() {
             var step = Math.min(1, (new Date().getTime() - start) / duration);
             var x = (initial + step * (final - initial))
@@ -495,6 +497,7 @@ Vara.prototype.setPosition = function(e, obj, relative) {
     relative.x = relative.x == undefined ? false : relative.x;
     relative.y = relative.y == undefined ? false : relative.y;
     var p = e.transform.baseVal.consolidate().matrix;
+
     var x = p.e,
         y = p.f;
     if (obj.x != undefined) {
@@ -505,7 +508,17 @@ Vara.prototype.setPosition = function(e, obj, relative) {
         if (relative.y) y = y + obj.y;
         else y = obj.y - e.getBBox().y;
     }
-    e.transform.baseVal.consolidate().setTranslate(x, y);
+
+	var translate = this.svg.createSVGTransform();
+	translate.setTranslate(x, y);
+
+    e.transform.baseVal.replaceItem(translate,0);
+
+    /*
+	This was the initial way i chose to set position, but it is not supported in safari.
+	e.transform.baseVal.consolidate().setTranslate(x, y);
+
+	*/
 }
 
 if (typeof module !== 'undefined') {
