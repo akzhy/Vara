@@ -442,7 +442,7 @@ Vara.prototype.analyseWidth = function() {
         breakPoints represents the indices where a new line appears.
         */
         for (var x = 0; x < textArray.length; x++) {
-            var lWidth = inx * scale;
+            var lWidth = inx;
             var bp2 = [];
             var text = textArray[x];
             var lastSpace = 0;
@@ -465,7 +465,7 @@ Vara.prototype.analyseWidth = function() {
                         pos = text.slice(0, pos + 1).search(/\S+$/);
                     }
                     bp2.push(pos);
-                    lWidth = inx * scale + lWidth - lastSpace;
+                    lWidth = inx + lWidth - lastSpace;
                 } else {
                     width += increment;
                     lWidth += increment;
