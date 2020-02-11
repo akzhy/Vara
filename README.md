@@ -59,8 +59,17 @@ new Vara("#container","font.json",[
 	},
 	autoAnimation:true, // Boolean, Whether to animate the text automatically
 	queued:true, // Boolean, Whether the animation should be in a queue
-	delay:0,     // Delay before the animation starts in milliseconds
-	letterSpacing:0 // Number, space between each character
+    delay:0,     // Delay before the animation starts in milliseconds
+    /* Letter spacing can be a number or an object, if number, the spacing will be applied to every character.
+    If object, each letter can be assigned a different spacing as follows,
+    letterSpacing: {
+        a: 4,
+        j: -6,
+        global: -1
+    }
+    The global property is used to set spacing of all other characters
+    */
+	letterSpacing:0
 }],{
 	// The options given below will be applicable to every text created,
 	// however they will not override the options set above.
