@@ -233,9 +233,16 @@ Vara.prototype.createText = function() {
                 })
                 drawnPart.push(cGroup);
                 var correction = cGroup.getBBox().x * fontSize;
+                var letterSpacing = this.texts[j].letterSpacing;
+                if(typeof letterSpacing === "object"){
+                    letterSpacing = letterSpacing[text] === undefined ? letterSpacing["global"] === undefined ? 0 : letterSpacing["global"] : letterSpacing[text];
+                }
                 if (cGroup.getBBox().width < this.texts[j].minWidth) correction = correction - (this.texts[j].minWidth - cGroup.getBBox().width) / 2;
-                cGroup.setAttribute("transform", "translate(" + (cWidth - correction + this.texts[j].letterSpacing) + ",0)  scale(" + fontSize + ")");
-                cWidth += cGroup.getBBox().width * fontSize + this.texts[j].letterSpacing;
+
+                cGroup.setAttribute("transform", "translate(" + (cWidth - correction + letterSpacing) + ",0)  scale(" + fontSize + ")");
+
+                cWidth += cGroup.getBBox().width * fontSize + letterSpacing;
+
                 if (cGroup.getBBox().width < this.texts[j].minWidth) cWidth += (this.texts[j].minWidth - cGroup.getBBox().width);
             }
             var fgBox = fg.getBBox();
@@ -436,6 +443,8 @@ Vara.prototype.analyseWidth = function() {
         var inx = this.texts[j].x == undefined ? 0 : this.texts[j].x;
         this.trueFontSize = fontSize;
         this.texts[j].fontSize = scale;
+
+        var letterSpacing = this.texts[j].letterSpacing;
         /*
         Each character is iterated and is added to the variable lWidth. If the x coordinate of the paragraph is given lWidth will be initialized with the x coordinate.
         if the width exceeds the canvasWidth, then its array index value is appended to the breakPoints array.
@@ -447,15 +456,20 @@ Vara.prototype.analyseWidth = function() {
             var text = textArray[x];
             var lastSpace = 0;
             for (var i = 0; i < text.length; i++) {
+                if(typeof letterSpacing === "object"){
+                    if(typeof letterSpacing === "object"){
+                        letterSpacing = letterSpacing[text] === undefined ? letterSpacing["global"] === undefined ? 0 : letterSpacing["global"] : letterSpacing[text];
+                    }
+                }
                 if (this.characters[text[i].charCodeAt(0)] != undefined) {
                     increment = this.characters[text[i].charCodeAt(0)].w * scale;
                     if (increment < this.texts[j].minWidth) increment += scale * (this.texts[j].minWidth - this.characters[text[i].charCodeAt(0)].w) / 2;
-                    increment += this.texts[j].letterSpacing;
+                    increment += letterSpacing;
                 } else {
                     if (text[i] == " ") {
                         increment = this.space.w * scale;
                         lastSpace = lWidth;
-                    } else increment = this.questionMark.w * scale + this.texts[j].letterSpacing;
+                    } else increment = this.questionMark.w * scale + letterSpacing;
                 }
                 increment += this.texts[j].strokeWidth * scale;
                 if (lWidth + increment >= canvasWidth) {
