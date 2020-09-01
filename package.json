@@ -4,7 +4,8 @@
   "description": "Vara can create realistic text drawing animations using SVG and a JSON file that acts as font",
   "main": "src/vara.min.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+      "dev": "rollup --config rollup.config.js --watch",
+    "build": "rollup --config rollup.config.js --sourcemap"
   },
   "repository": {
     "type": "git",
@@ -20,5 +21,15 @@
   "bugs": {
     "url": "https://github.com/akzhy/vara/issues"
   },
-  "homepage": "https://github.com/akzhy/vara#readme"
+  "homepage": "https://github.com/akzhy/vara#readme",
+  "devDependencies": {
+    "@babel/core": "^7.8.4",
+    "@babel/preset-env": "^7.8.4",
+    "rollup": "^1.27.8",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-babel-minify": "^9.1.1"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.8.4"
+  }
 }
