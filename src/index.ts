@@ -1,6 +1,4 @@
 //# sourceMappingURL=./vara.js.map
-import { SVGPathData } from "svg-pathdata"
-
 type VaraGeneralOptions = {
     fontSize?: number;
     strokeWidth?: number;
@@ -38,7 +36,7 @@ type RenderData = VaraText & {
         text: string;
         x: number;
         y: number;
-    };
+    }[];
 };
 
 type VaraFontItem = {
@@ -47,7 +45,7 @@ type VaraFontItem = {
         h: number;
         my: number;
         mx: number;
-        pw: number;
+        dx: number;
         d: string;
     }>;
     w: number;
@@ -88,6 +86,8 @@ class Vara {
         space: number;
         tf: number;
     };
+    WHITESPACE: number;
+    SCALEBASE: number;
 
     constructor(
         elem: string,
@@ -129,7 +129,7 @@ class Vara {
                         h: 14.231731414794922,
                         my: 22.666500004827977,
                         mx: 0,
-                        pw: 28.2464542388916,
+                        dx: 0,
                         d:
                             'm 0,0 c -2,-6.01,5,-8.64,8,-3.98,2,4.09,-7,8.57,-7,11.85',
                     },
@@ -137,8 +137,8 @@ class Vara {
                         w: 1.103759765625,
                         h: 1.549820899963379,
                         my: 8.881500004827977,
+                        dx: 0,
                         mx: 1,
-                        pw: 4.466640472412109,
                         d:
                             'm 0,0 a 0.7592,0.7357,0,0,1,0,0.735,0.7592,0.7357,0,0,1,-1,-0.735,0.7592,0.7357,0,0,1,1,-0.738,0.7592,0.7357,0,0,1,0,0.738 z',
                     },
@@ -148,8 +148,12 @@ class Vara {
         };
 
         this.canvas = document.createElement('canvas');
+        this.canvas.width = 800;
+        this.canvas.height = 800;
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         this.element.appendChild(this.canvas);
+        this.WHITESPACE = 10;
+        this.SCALEBASE = 16;
 
         this.init();
     }
@@ -165,11 +169,37 @@ class Vara {
                     const contents = JSON.parse(xmlhttp.responseText);
                     this.fontCharacters = contents.c;
                     this.fontProperties = contents.p;
+                    this.preRender();
                     this.render();
                 }
             }
         };
         xmlhttp.send(null);
+    }
+
+    preRender() {
+        let svg = this.createSVGNode('svg', {
+            width: '100',
+            height: '100',
+        });
+        svg.style.position = 'absolute';
+        svg.style.zIndex = '-100';
+        svg.style.opacity = '0';
+        svg.style.top = '0';
+
+        document.body.appendChild(svg);
+        let svgPathData = this.createSVGNode('path', {
+            d: '',
+        }) as SVGPathElement;
+        svg.appendChild(svgPathData);
+        this.objectKeys(this.fontCharacters).forEach(char => {
+            this.fontCharacters[char].paths.forEach((path, i) => {
+                svgPathData.setAttributeNS(null, 'd', path.d);
+                this.fontCharacters[char].paths[
+                    i
+                ].dx = svgPathData.getBoundingClientRect().x;
+            });
+        });
     }
 
     render() {
@@ -183,15 +213,32 @@ class Vara {
         this.ctx.strokeStyle = textItem.color;
         this.ctx.lineWidth = textItem.strokeWidth;
         this.ctx.fillStyle = 'transparent';
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        let top = 0;
 
-        textItem.render.text.split('').forEach(letter => {
-            let charCode = letter.charCodeAt(0);
-            if (this.fontCharacters[charCode])
-                this.fontCharacters[charCode].paths.forEach(path => {
-                    const svg = new SVGPathData(path.d);
-                    console.log(svg);
-                });
-        });
+        let scale = textItem.fontSize / this.SCALEBASE;
+
+        textItem.render.forEach(textLine => {
+            let left = textLine.x/2;
+            
+            textLine.text.split('').forEach(letter => {
+                let charCode = letter.charCodeAt(0);
+                if (letter === ' ') {
+                    left += this.WHITESPACE;
+                } else if (this.fontCharacters[charCode]) {
+                    this.ctx.save();
+                    this.ctx.scale(scale, scale);
+                    this.fontCharacters[charCode].paths.forEach(path => {
+                        let processedPath = this.processPath(path.d, left + path.mx - path.dx, textLine.y + top + 20 - path.my + 1)
+                        this.ctx.stroke(new Path2D(processedPath));
+                    });
+                    left += this.fontCharacters[charCode].w;
+                    this.ctx.restore();
+                }
+            });
+            top+= 30;
+        })
     }
 
     normalizeOptions() {
@@ -230,7 +277,8 @@ class Vara {
 
     calculatePositions(_textItem: RenderData) {
         const textItem = <Required<RenderData>>_textItem;
-
+        let scale = textItem.fontSize / this.SCALEBASE;
+        // TODO: Create non breaking text
         if (!textItem.breakWord) {
             const textBlock =
                 typeof textItem.text === 'string'
@@ -241,9 +289,15 @@ class Vara {
                 return line.split(' ');
             });
 
-            let lineWidth = 0;
-            const lines: string[] = [''];
+            const lines: {
+                text: string;
+                width: number;
+            }[] = [{
+                text: "",
+                width: 0
+            }];
             breakedTextBlock.forEach(line => {
+                let spaceWidth = 0;
                 line.forEach(word => {
                     let wordWidth = 0;
 
@@ -253,27 +307,49 @@ class Vara {
                         const currentLetter =
                             this.fontCharacters[charCode] ||
                             this.fontCharacters['63'];
-
-                        wordWidth += currentLetter.w * (textItem.fontSize / 16);
+                        let pathPositionCorrection = currentLetter.paths.reduce((a,c) => a+c.mx-c.dx, 0)
+                        wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
                     });
 
-                    if (lineWidth + wordWidth > textItem.width) {
-                        lineWidth = 0;
-                        lines.push(word);
+                    if (lines[lines.length-1].width + wordWidth + spaceWidth + textItem.x*scale > textItem.width) {
+                        lines.push({
+                            text: word,
+                            width: wordWidth
+                        });
+                        spaceWidth = 0;
                     } else {
-                        lines[lines.length - 1] += word;
-                        lineWidth += wordWidth;
+                        lines[lines.length - 1] = {
+                            text: lines[lines.length-1].text+word,
+                            width: lines[lines.length-1].width+wordWidth
+                        };
+                        spaceWidth+= this.WHITESPACE * scale;
+                        lines[lines.length - 1].text += ' ';
                     }
-                    lines[lines.length - 1] += ' ';
                 });
             });
 
             lines.forEach(line => {
-                textItem.render = {
-                    text: line,
-                    x: textItem.x,
-                    y: textItem.y,
-                };
+                console.log(line.text, line.width)
+                let x = textItem.x;
+                if(textItem.textAlign === "center") {
+                    console.log(line.width, (textItem.width - line.width)/2);
+                    x = (textItem.width - line.width)/2;
+                }
+                if (textItem.render) {
+                    textItem.render.push({
+                        text: line.text,
+                        x: x,
+                        y: textItem.y,
+                    });
+                } else {
+                    textItem.render = [
+                        {
+                            text: line.text,
+                            x: x,
+                            y: textItem.y,
+                        },
+                    ];
+                }
             });
         }
     }
@@ -291,9 +367,28 @@ class Vara {
         return e;
     }
 
+    processPath(path:string, x=0, y=0) {
+        let svgPath = path.split('');
+        svgPath[2] = x + 1 + '';
+        svgPath[4] = y + '';
+        return svgPath.join('');
+    }
+
     objectKeys<T>(x: T) {
         let keys = Object.keys(x) as ObjectKeys<T>;
         return keys;
+    }
+}
+
+class Group {
+    items: any[];
+    x: number;
+    y: number;
+
+    constructor() {
+        this.items = [];
+        this.x = 0;
+        this.y = 0;
     }
 }
 
