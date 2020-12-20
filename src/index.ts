@@ -1,4 +1,3 @@
-//# sourceMappingURL=./vara.js.map
 type VaraGeneralOptions = {
     fontSize?: number;
     strokeWidth?: number;
@@ -33,10 +32,14 @@ type VaraText = VaraTextOptions & {
 
 type RenderData = VaraText & {
     render?: {
-        text: string;
+        path: string;
         x: number;
         y: number;
+        pathLength: number;
+        dashOffset: number;
     }[];
+    currentlyDrawing?: number;
+    startTime?: number | false;
 };
 
 type VaraFontItem = {
@@ -47,6 +50,7 @@ type VaraFontItem = {
         mx: number;
         dx: number;
         d: string;
+        pl: number;
     }>;
     w: number;
 };
@@ -132,6 +136,7 @@ class Vara {
                         dx: 0,
                         d:
                             'm 0,0 c -2,-6.01,5,-8.64,8,-3.98,2,4.09,-7,8.57,-7,11.85',
+                        pl: 1,
                     },
                     {
                         w: 1.103759765625,
@@ -141,6 +146,7 @@ class Vara {
                         mx: 1,
                         d:
                             'm 0,0 a 0.7592,0.7357,0,0,1,0,0.735,0.7592,0.7357,0,0,1,-1,-0.735,0.7592,0.7357,0,0,1,1,-0.738,0.7592,0.7357,0,0,1,0,0.738 z',
+                        pl: 1,
                     },
                 ],
                 w: 8.643798828125,
@@ -171,6 +177,7 @@ class Vara {
                     this.fontProperties = contents.p;
                     this.preRender();
                     this.render();
+                    //window.requestAnimationFrame()
                 }
             }
         };
@@ -198,48 +205,75 @@ class Vara {
                 this.fontCharacters[char].paths[
                     i
                 ].dx = svgPathData.getBoundingClientRect().x;
+                this.fontCharacters[char].paths[
+                    i
+                ].pl = svgPathData.getTotalLength();
             });
         });
+
+        this.renderData.forEach(item => {
+            item.currentlyDrawing = 0;
+            item.startTime = false;
+        })
+
+        this.generateRenderData(this.renderData[1]);
     }
 
-    render() {
-        this.calculatePositions(this.renderData[1]);
-        this.draw(this.renderData[1]);
+    render(rafTime=0) {
+        this.ctx.clearRect(0, 0, 800, 800);
+        this.draw(this.renderData[1], rafTime);
+        window.requestAnimationFrame((time) => this.render(time));
     }
 
-    draw(_textItem: RenderData) {
-        // path - "d": "m 0,0 c 1.677946,-5.44834,5.875964,-14.09066,3.788545,-14.26551,-1.909719,-0.15996,-2.796112,9.62055,-3.788545,14.26551 z"
+    draw(_textItem: RenderData, rafTime: number) {
         const textItem = <Required<RenderData>>_textItem;
         this.ctx.strokeStyle = textItem.color;
         this.ctx.lineWidth = textItem.strokeWidth;
         this.ctx.fillStyle = 'transparent';
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
-        let top = 0;
 
         let scale = textItem.fontSize / this.SCALEBASE;
 
-        textItem.render.forEach(textLine => {
-            let left = textLine.x/2;
+        const totalPathLength = textItem.render.reduce((a,c) => a+c.pathLength, 0);
+
+        if(!textItem.startTime) {
+            textItem.startTime = rafTime;
+        }
+
+        textItem.render.forEach((item, itemIndex) => {
             
-            textLine.text.split('').forEach(letter => {
-                let charCode = letter.charCodeAt(0);
-                if (letter === ' ') {
-                    left += this.WHITESPACE;
-                } else if (this.fontCharacters[charCode]) {
-                    this.ctx.save();
-                    this.ctx.scale(scale, scale);
-                    this.fontCharacters[charCode].paths.forEach(path => {
-                        let processedPath = this.processPath(path.d, left + path.mx - path.dx, textLine.y + top + 20 - path.my + 1)
-                        this.ctx.stroke(new Path2D(processedPath));
-                    });
-                    left += this.fontCharacters[charCode].w;
-                    this.ctx.restore();
+            const pathDuration = ((item.pathLength / totalPathLength) * textItem.duration)/1000;
+            const delta = (rafTime - (textItem.startTime as number)) / 1000;
+
+            const speed = item.pathLength / pathDuration;
+
+            this.ctx.save();
+            this.ctx.scale(scale, scale);
+
+            this.ctx.setLineDash([item.dashOffset, item.pathLength]);
+            if(textItem.currentlyDrawing === itemIndex) {
+                console.log(textItem.currentlyDrawing, speed, delta);
+                if(item.dashOffset >= item.pathLength) {
+                    textItem.currentlyDrawing+= 1;
                 }
-            });
-            top+= 30;
-        })
+                item.dashOffset+= speed * delta;
+            }
+            
+            this.ctx.stroke(
+                new Path2D(this.processPath(item.path, item.x, item.y))
+            );
+            this.ctx.restore();
+        });
+
+        textItem.startTime = rafTime;
+        
     }
+
+    /**
+     * Sets default option value for all existing option properties.
+     * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
+     */
 
     normalizeOptions() {
         this.options = this.options || {};
@@ -275,7 +309,11 @@ class Vara {
         });
     }
 
-    calculatePositions(_textItem: RenderData) {
+    /**
+     * Calculates the position of each item on the canvas and returns the data required to render it.
+     * @param {RenderData} _textItem A single text block that needs to be rendered.
+     */
+    generateRenderData(_textItem: RenderData) {
         const textItem = <Required<RenderData>>_textItem;
         let scale = textItem.fontSize / this.SCALEBASE;
         // TODO: Create non breaking text
@@ -292,10 +330,13 @@ class Vara {
             const lines: {
                 text: string;
                 width: number;
-            }[] = [{
-                text: "",
-                width: 0
-            }];
+            }[] = [
+                {
+                    text: '',
+                    width: 0,
+                },
+            ];
+
             breakedTextBlock.forEach(line => {
                 let spaceWidth = 0;
                 line.forEach(word => {
@@ -307,52 +348,88 @@ class Vara {
                         const currentLetter =
                             this.fontCharacters[charCode] ||
                             this.fontCharacters['63'];
-                        let pathPositionCorrection = currentLetter.paths.reduce((a,c) => a+c.mx-c.dx, 0)
-                        wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
+                        let pathPositionCorrection = currentLetter.paths.reduce(
+                            (a, c) => a + c.mx - c.dx,
+                            0
+                        );
+                        wordWidth +=
+                            (currentLetter.w + pathPositionCorrection) * scale;
                     });
 
-                    if (lines[lines.length-1].width + wordWidth + spaceWidth + textItem.x*scale > textItem.width) {
+                    if (
+                        lines[lines.length - 1].width +
+                            wordWidth +
+                            5 * scale +
+                            spaceWidth +
+                            textItem.x * scale >
+                        textItem.width
+                    ) {
                         lines.push({
-                            text: word,
-                            width: wordWidth
+                            text: word + ' ',
+                            width: wordWidth,
                         });
                         spaceWidth = 0;
                     } else {
                         lines[lines.length - 1] = {
-                            text: lines[lines.length-1].text+word,
-                            width: lines[lines.length-1].width+wordWidth
+                            text: lines[lines.length - 1].text + word,
+                            width: lines[lines.length - 1].width + wordWidth,
                         };
-                        spaceWidth+= this.WHITESPACE * scale;
+                        spaceWidth += this.WHITESPACE * scale;
                         lines[lines.length - 1].text += ' ';
                     }
                 });
             });
 
+            let posX = textItem.x / scale,
+                posY = textItem.y / scale,
+                top = textItem.fontSize * 1.2;
+
             lines.forEach(line => {
-                console.log(line.text, line.width)
-                let x = textItem.x;
-                if(textItem.textAlign === "center") {
-                    console.log(line.width, (textItem.width - line.width)/2);
-                    x = (textItem.width - line.width)/2;
+                let left = 0;
+                let x = posX,
+                    y = posY;
+                console.log(
+                    textItem.width,
+                    line.width,
+                    textItem.width - line.width
+                );
+                if (textItem.textAlign === 'center') {
+                    x = (textItem.width - line.width) / 2 / scale;
                 }
-                if (textItem.render) {
-                    textItem.render.push({
-                        text: line.text,
-                        x: x,
-                        y: textItem.y,
-                    });
-                } else {
-                    textItem.render = [
-                        {
-                            text: line.text,
-                            x: x,
-                            y: textItem.y,
-                        },
-                    ];
-                }
+                line.text.split('').forEach(letter => {
+                    if (letter === ' ') {
+                        left += this.WHITESPACE;
+                    } else {
+                        const currentLetter =
+                            this.fontCharacters[letter.charCodeAt(0)] ||
+                            this.fontCharacters['63'];
+
+                        if (!textItem.render) {
+                            textItem.render = [];
+                        }
+                        currentLetter.paths.forEach(path => {
+                            textItem.render.push({
+                                path: path.d,
+                                x: x + left + path.mx - path.dx,
+                                y: y + top - path.my,
+                                pathLength: path.pl,
+                                dashOffset: 0
+                            });
+                        });
+
+                        left += currentLetter.w;
+                    }
+                });
+                top += 30;
             });
         }
     }
+
+    /**
+     * Creates and returns an SVG element
+     * @param n The name of the SVG node to be created
+     * @param v The attributes of the node
+     */
 
     createSVGNode(n: string, v: { [x: string]: string }) {
         const e = document.createElementNS('http://www.w3.org/2000/svg', n);
@@ -367,7 +444,13 @@ class Vara {
         return e;
     }
 
-    processPath(path:string, x=0, y=0) {
+    /**
+     * Modifies the move to command of a given path and returns it.
+     * @param path The path "d" property
+     * @param x The x co-ordinate
+     * @param y The y co-ordinate
+     */
+    processPath(path: string, x = 0, y = 0) {
         let svgPath = path.split('');
         svgPath[2] = x + 1 + '';
         svgPath[4] = y + '';
@@ -377,6 +460,14 @@ class Vara {
     objectKeys<T>(x: T) {
         let keys = Object.keys(x) as ObjectKeys<T>;
         return keys;
+    }
+
+    boundRect(x: number, y: number, w: number, h = 10) {
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(209, 56, 61,0.4)';
+        this.ctx.fillRect(x, y, w, h);
+        this.ctx.fill();
+        this.ctx.restore();
     }
 }
 

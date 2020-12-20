@@ -55,14 +55,16 @@
             my: 22.666500004827977,
             mx: 0,
             dx: 0,
-            d: 'm 0,0 c -2,-6.01,5,-8.64,8,-3.98,2,4.09,-7,8.57,-7,11.85'
+            d: 'm 0,0 c -2,-6.01,5,-8.64,8,-3.98,2,4.09,-7,8.57,-7,11.85',
+            pl: 1
           }, {
             w: 1.103759765625,
             h: 1.549820899963379,
             my: 8.881500004827977,
             dx: 0,
             mx: 1,
-            d: 'm 0,0 a 0.7592,0.7357,0,0,1,0,0.735,0.7592,0.7357,0,0,1,-1,-0.735,0.7592,0.7357,0,0,1,1,-0.738,0.7592,0.7357,0,0,1,0,0.738 z'
+            d: 'm 0,0 a 0.7592,0.7357,0,0,1,0,0.735,0.7592,0.7357,0,0,1,-1,-0.735,0.7592,0.7357,0,0,1,1,-0.738,0.7592,0.7357,0,0,1,0,0.738 z',
+            pl: 1
           }],
           w: 8.643798828125
         }
@@ -95,7 +97,8 @@
 
             _this.preRender();
 
-            _this.render();
+            _this.render(); //window.requestAnimationFrame()
+
           }
         }
       };
@@ -123,85 +126,117 @@
         _this2.fontCharacters[_char].paths.forEach(function (path, i) {
           svgPathData.setAttributeNS(null, 'd', path.d);
           _this2.fontCharacters[_char].paths[i].dx = svgPathData.getBoundingClientRect().x;
+          _this2.fontCharacters[_char].paths[i].pl = svgPathData.getTotalLength();
         });
+      });
+      this.renderData.forEach(function (item) {
+        item.currentlyDrawing = 0;
+        item.startTime = false;
+      });
+      this.generateRenderData(this.renderData[1]);
+    };
+
+    _proto.render = function render(rafTime) {
+      var _this3 = this;
+
+      if (rafTime === void 0) {
+        rafTime = 0;
+      }
+
+      this.ctx.clearRect(0, 0, 800, 800);
+      this.draw(this.renderData[1], rafTime);
+      window.requestAnimationFrame(function (time) {
+        return _this3.render(time);
       });
     };
 
-    _proto.render = function render() {
-      this.calculatePositions(this.renderData[1]);
-      this.draw(this.renderData[1]);
-    };
+    _proto.draw = function draw(_textItem, rafTime) {
+      var _this4 = this;
 
-    _proto.draw = function draw(_textItem) {
-      var _this3 = this;
-
-      // path - "d": "m 0,0 c 1.677946,-5.44834,5.875964,-14.09066,3.788545,-14.26551,-1.909719,-0.15996,-2.796112,9.62055,-3.788545,14.26551 z"
       var textItem = _textItem;
       this.ctx.strokeStyle = textItem.color;
       this.ctx.lineWidth = textItem.strokeWidth;
       this.ctx.fillStyle = 'transparent';
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
-      var top = 0;
       var scale = textItem.fontSize / this.SCALEBASE;
-      textItem.render.forEach(function (textLine) {
-        var left = textLine.x / 2;
-        textLine.text.split('').forEach(function (letter) {
-          var charCode = letter.charCodeAt(0);
+      var totalPathLength = textItem.render.reduce(function (a, c) {
+        return a + c.pathLength;
+      }, 0);
 
-          if (letter === ' ') {
-            left += _this3.WHITESPACE;
-          } else if (_this3.fontCharacters[charCode]) {
-            _this3.ctx.save();
+      if (!textItem.startTime) {
+        textItem.startTime = rafTime;
+      }
 
-            _this3.ctx.scale(scale, scale);
+      textItem.render.forEach(function (item, itemIndex) {
+        var pathDuration = item.pathLength / totalPathLength * textItem.duration / 1000;
+        var delta = (rafTime - textItem.startTime) / 1000;
+        var speed = item.pathLength / pathDuration;
 
-            _this3.fontCharacters[charCode].paths.forEach(function (path) {
-              var processedPath = _this3.processPath(path.d, left + path.mx - path.dx, textLine.y + top + 20 - path.my + 1);
+        _this4.ctx.save();
 
-              _this3.ctx.stroke(new Path2D(processedPath));
-            });
+        _this4.ctx.scale(scale, scale);
 
-            left += _this3.fontCharacters[charCode].w;
+        _this4.ctx.setLineDash([item.dashOffset, item.pathLength]);
 
-            _this3.ctx.restore();
+        if (textItem.currentlyDrawing === itemIndex) {
+          console.log(textItem.currentlyDrawing, speed, delta);
+
+          if (item.dashOffset >= item.pathLength) {
+            textItem.currentlyDrawing += 1;
           }
-        });
-        top += 30;
+
+          item.dashOffset += speed * delta;
+        }
+
+        _this4.ctx.stroke(new Path2D(_this4.processPath(item.path, item.x, item.y)));
+
+        _this4.ctx.restore();
       });
-    };
+      textItem.startTime = rafTime;
+    }
+    /**
+     * Sets default option value for all existing option properties.
+     * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
+     */
+    ;
 
     _proto.normalizeOptions = function normalizeOptions() {
-      var _this4 = this;
+      var _this5 = this;
 
       this.options = this.options || {};
       this.objectKeys(this.defaultOptions).forEach(function (optionKey) {
-        if (_this4.options[optionKey] === undefined) {
+        if (_this5.options[optionKey] === undefined) {
           // @ts-ignore
-          _this4.options[optionKey] = _this4.defaultOptions[optionKey];
+          _this5.options[optionKey] = _this5.defaultOptions[optionKey];
         }
       });
       this.renderData.forEach(function (textItem, i) {
         if (typeof textItem === 'string') {
-          _this4.renderData[i] = _extends({
+          _this5.renderData[i] = _extends({
             text: textItem
-          }, _this4.defaultOptions);
+          }, _this5.defaultOptions);
         } else if (typeof textItem === 'object') {
-          _this4.objectKeys(_this4.options).forEach(function (option) {
+          _this5.objectKeys(_this5.options).forEach(function (option) {
             if (textItem[option] === undefined) // @ts-ignore
-              textItem[option] = _this4.options[option];
+              textItem[option] = _this5.options[option];
           });
         }
       });
       Object.keys(this.defaultCharacters).forEach(function (character) {
-        if (_this4.fontCharacters[character] === undefined) {
-          _this4.fontCharacters[character] = _this4.defaultCharacters[character];
+        if (_this5.fontCharacters[character] === undefined) {
+          _this5.fontCharacters[character] = _this5.defaultCharacters[character];
         }
       });
-    };
+    }
+    /**
+     * Calculates the position of each item on the canvas and returns the data required to render it.
+     * @param {RenderData} _textItem A single text block that needs to be rendered.
+     */
+    ;
 
-    _proto.calculatePositions = function calculatePositions(_textItem) {
-      var _this5 = this;
+    _proto.generateRenderData = function generateRenderData(_textItem) {
+      var _this6 = this;
 
       var textItem = _textItem;
       var scale = textItem.fontSize / this.SCALEBASE; // TODO: Create non breaking text
@@ -212,7 +247,7 @@
           return line.split(' ');
         });
         var lines = [{
-          text: "",
+          text: '',
           width: 0
         }];
         breakedTextBlock.forEach(function (line) {
@@ -221,16 +256,16 @@
             var wordWidth = 0;
             word.split('').forEach(function (letter) {
               var charCode = letter.charCodeAt(0);
-              var currentLetter = _this5.fontCharacters[charCode] || _this5.fontCharacters['63'];
+              var currentLetter = _this6.fontCharacters[charCode] || _this6.fontCharacters['63'];
               var pathPositionCorrection = currentLetter.paths.reduce(function (a, c) {
                 return a + c.mx - c.dx;
               }, 0);
               wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
             });
 
-            if (lines[lines.length - 1].width + wordWidth + spaceWidth + textItem.x * scale > textItem.width) {
+            if (lines[lines.length - 1].width + wordWidth + 5 * scale + spaceWidth + textItem.x * scale > textItem.width) {
               lines.push({
-                text: word,
+                text: word + ' ',
                 width: wordWidth
               });
               spaceWidth = 0;
@@ -239,36 +274,56 @@
                 text: lines[lines.length - 1].text + word,
                 width: lines[lines.length - 1].width + wordWidth
               };
-              spaceWidth += _this5.WHITESPACE * scale;
+              spaceWidth += _this6.WHITESPACE * scale;
               lines[lines.length - 1].text += ' ';
             }
           });
         });
+        var posX = textItem.x / scale,
+            posY = textItem.y / scale,
+            top = textItem.fontSize * 1.2;
         lines.forEach(function (line) {
-          console.log(line.text, line.width);
-          var x = textItem.x;
+          var left = 0;
+          var x = posX,
+              y = posY;
+          console.log(textItem.width, line.width, textItem.width - line.width);
 
-          if (textItem.textAlign === "center") {
-            console.log(line.width, (textItem.width - line.width) / 2);
-            x = (textItem.width - line.width) / 2;
+          if (textItem.textAlign === 'center') {
+            x = (textItem.width - line.width) / 2 / scale;
           }
 
-          if (textItem.render) {
-            textItem.render.push({
-              text: line.text,
-              x: x,
-              y: textItem.y
-            });
-          } else {
-            textItem.render = [{
-              text: line.text,
-              x: x,
-              y: textItem.y
-            }];
-          }
+          line.text.split('').forEach(function (letter) {
+            if (letter === ' ') {
+              left += _this6.WHITESPACE;
+            } else {
+              var currentLetter = _this6.fontCharacters[letter.charCodeAt(0)] || _this6.fontCharacters['63'];
+
+              if (!textItem.render) {
+                textItem.render = [];
+              }
+
+              currentLetter.paths.forEach(function (path) {
+                textItem.render.push({
+                  path: path.d,
+                  x: x + left + path.mx - path.dx,
+                  y: y + top - path.my,
+                  pathLength: path.pl,
+                  dashOffset: 0
+                });
+              });
+              left += currentLetter.w;
+            }
+          });
+          top += 30;
         });
       }
-    };
+    }
+    /**
+     * Creates and returns an SVG element
+     * @param n The name of the SVG node to be created
+     * @param v The attributes of the node
+     */
+    ;
 
     _proto.createSVGNode = function createSVGNode(n, v) {
       var e = document.createElementNS('http://www.w3.org/2000/svg', n);
@@ -280,7 +335,14 @@
       }
 
       return e;
-    };
+    }
+    /**
+     * Modifies the move to command of a given path and returns it.
+     * @param path The path "d" property
+     * @param x The x co-ordinate
+     * @param y The y co-ordinate
+     */
+    ;
 
     _proto.processPath = function processPath(path, x, y) {
       if (x === void 0) {
@@ -300,6 +362,18 @@
     _proto.objectKeys = function objectKeys(x) {
       var keys = Object.keys(x);
       return keys;
+    };
+
+    _proto.boundRect = function boundRect(x, y, w, h) {
+      if (h === void 0) {
+        h = 10;
+      }
+
+      this.ctx.save();
+      this.ctx.fillStyle = 'rgba(209, 56, 61,0.4)';
+      this.ctx.fillRect(x, y, w, h);
+      this.ctx.fill();
+      this.ctx.restore();
     };
 
     return Vara;
