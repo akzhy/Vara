@@ -45,7 +45,8 @@
         letterSpacing: {
           global: 0
         },
-        width: this.element.getBoundingClientRect().width
+        width: this.element.getBoundingClientRect().width,
+        lineHeight: 30
       };
       this.defaultCharacters = {
         '63': {
@@ -76,6 +77,7 @@
       this.element.appendChild(this.canvas);
       this.WHITESPACE = 10;
       this.SCALEBASE = 16;
+      this.contextHeight = 0;
       this.init();
     }
 
@@ -104,10 +106,44 @@
       };
 
       xmlhttp.send(null);
+    }
+    /**
+     * Sets default option value for all existing option properties.
+     * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
+     */
+    ;
+
+    _proto.normalizeOptions = function normalizeOptions() {
+      var _this2 = this;
+
+      this.options = this.options || {};
+      this.objectKeys(this.defaultOptions).forEach(function (optionKey) {
+        if (_this2.options[optionKey] === undefined) {
+          // @ts-ignore
+          _this2.options[optionKey] = _this2.defaultOptions[optionKey];
+        }
+      });
+      this.renderData.forEach(function (textItem, i) {
+        if (typeof textItem === 'string') {
+          _this2.renderData[i] = _extends({
+            text: textItem
+          }, _this2.defaultOptions);
+        } else if (typeof textItem === 'object') {
+          _this2.objectKeys(_this2.options).forEach(function (option) {
+            if (textItem[option] === undefined) // @ts-ignore
+              textItem[option] = _this2.options[option];
+          });
+        }
+      });
+      Object.keys(this.defaultCharacters).forEach(function (character) {
+        if (_this2.fontCharacters[character] === undefined) {
+          _this2.fontCharacters[character] = _this2.defaultCharacters[character];
+        }
+      });
     };
 
     _proto.preRender = function preRender() {
-      var _this2 = this;
+      var _this3 = this;
 
       var svg = this.createSVGNode('svg', {
         width: '100',
@@ -123,35 +159,41 @@
       });
       svg.appendChild(svgPathData);
       this.objectKeys(this.fontCharacters).forEach(function (_char) {
-        _this2.fontCharacters[_char].paths.forEach(function (path, i) {
+        _this3.fontCharacters[_char].paths.forEach(function (path, i) {
           svgPathData.setAttributeNS(null, 'd', path.d);
-          _this2.fontCharacters[_char].paths[i].dx = svgPathData.getBoundingClientRect().x;
-          _this2.fontCharacters[_char].paths[i].pl = svgPathData.getTotalLength();
+          _this3.fontCharacters[_char].paths[i].dx = svgPathData.getBoundingClientRect().x;
+          _this3.fontCharacters[_char].paths[i].pl = svgPathData.getTotalLength();
         });
       });
       this.renderData.forEach(function (item) {
         item.currentlyDrawing = 0;
         item.startTime = false;
       });
-      this.generateRenderData(this.renderData[1]);
+      this.generateRenderData(this.renderData[0]);
     };
 
     _proto.render = function render(rafTime) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (rafTime === void 0) {
         rafTime = 0;
       }
 
-      this.ctx.clearRect(0, 0, 800, 800);
-      this.draw(this.renderData[1], rafTime);
+      var canvasHeight = this.calculateCanvasHeight();
+
+      if (canvasHeight !== this.canvas.height) {
+        this.canvas.height = canvasHeight;
+      }
+
+      this.ctx.clearRect(0, 0, 800, canvasHeight);
+      this.draw(this.renderData[0], rafTime);
       window.requestAnimationFrame(function (time) {
-        return _this3.render(time);
+        return _this4.render(time);
       });
     };
 
     _proto.draw = function draw(_textItem, rafTime) {
-      var _this4 = this;
+      var _this5 = this;
 
       var textItem = _textItem;
       this.ctx.strokeStyle = textItem.color;
@@ -173,15 +215,15 @@
         var delta = (rafTime - textItem.startTime) / 1000;
         var speed = item.pathLength / pathDuration;
 
-        _this4.ctx.save();
+        _this5.ctx.save();
 
-        _this4.ctx.scale(scale, scale);
+        _this5.ctx.scale(scale, scale);
 
-        _this4.ctx.setLineDash([item.dashOffset, item.pathLength]);
+        _this5.ctx.lineDashOffset = 1;
+
+        _this5.ctx.setLineDash([item.dashOffset, item.pathLength + 1]);
 
         if (textItem.currentlyDrawing === itemIndex) {
-          console.log(textItem.currentlyDrawing, speed, delta);
-
           if (item.dashOffset >= item.pathLength) {
             textItem.currentlyDrawing += 1;
           }
@@ -189,45 +231,11 @@
           item.dashOffset += speed * delta;
         }
 
-        _this4.ctx.stroke(new Path2D(_this4.processPath(item.path, item.x, item.y)));
+        _this5.ctx.stroke(new Path2D(_this5.processPath(item.path, item.x, item.y)));
 
-        _this4.ctx.restore();
+        _this5.ctx.restore();
       });
       textItem.startTime = rafTime;
-    }
-    /**
-     * Sets default option value for all existing option properties.
-     * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
-     */
-    ;
-
-    _proto.normalizeOptions = function normalizeOptions() {
-      var _this5 = this;
-
-      this.options = this.options || {};
-      this.objectKeys(this.defaultOptions).forEach(function (optionKey) {
-        if (_this5.options[optionKey] === undefined) {
-          // @ts-ignore
-          _this5.options[optionKey] = _this5.defaultOptions[optionKey];
-        }
-      });
-      this.renderData.forEach(function (textItem, i) {
-        if (typeof textItem === 'string') {
-          _this5.renderData[i] = _extends({
-            text: textItem
-          }, _this5.defaultOptions);
-        } else if (typeof textItem === 'object') {
-          _this5.objectKeys(_this5.options).forEach(function (option) {
-            if (textItem[option] === undefined) // @ts-ignore
-              textItem[option] = _this5.options[option];
-          });
-        }
-      });
-      Object.keys(this.defaultCharacters).forEach(function (character) {
-        if (_this5.fontCharacters[character] === undefined) {
-          _this5.fontCharacters[character] = _this5.defaultCharacters[character];
-        }
-      });
     }
     /**
      * Calculates the position of each item on the canvas and returns the data required to render it.
@@ -239,7 +247,8 @@
       var _this6 = this;
 
       var textItem = _textItem;
-      var scale = textItem.fontSize / this.SCALEBASE; // TODO: Create non breaking text
+      var scale = textItem.fontSize / this.SCALEBASE;
+      textItem.height = 0; // TODO: Create non breaking text
 
       if (!textItem.breakWord) {
         var textBlock = typeof textItem.text === 'string' ? [textItem.text] : textItem.text;
@@ -280,13 +289,17 @@
           });
         });
         var posX = textItem.x / scale,
-            posY = textItem.y / scale,
-            top = textItem.fontSize * 1.2;
+            posY = this.getTopPosition(0) / scale + textItem.y / scale,
+            top = textItem.lineHeight;
+
+        if (!textItem.render) {
+          textItem.render = [];
+        }
+
         lines.forEach(function (line) {
           var left = 0;
           var x = posX,
               y = posY;
-          console.log(textItem.width, line.width, textItem.width - line.width);
 
           if (textItem.textAlign === 'center') {
             x = (textItem.width - line.width) / 2 / scale;
@@ -297,10 +310,6 @@
               left += _this6.WHITESPACE;
             } else {
               var currentLetter = _this6.fontCharacters[letter.charCodeAt(0)] || _this6.fontCharacters['63'];
-
-              if (!textItem.render) {
-                textItem.render = [];
-              }
 
               currentLetter.paths.forEach(function (path) {
                 textItem.render.push({
@@ -314,9 +323,43 @@
               left += currentLetter.w;
             }
           });
-          top += 30;
+          top += textItem.lineHeight;
+
+          if (!textItem.absolutePosition) {
+            console.log(textItem.height, textItem.lineHeight);
+            textItem.height += textItem.lineHeight * scale;
+          }
         });
       }
+    };
+
+    _proto.calculateCanvasHeight = function calculateCanvasHeight() {
+      var height = 0;
+      this.renderData.forEach(function (item) {
+        if (item.height && item.y) {
+          height += item.height + item.y;
+        }
+      });
+      return height + 50;
+    };
+
+    _proto.getTopPosition = function getTopPosition(i) {
+      if (i === 0) return 0;else return 1;
+    };
+
+    _proto.alterText = function alterText(id, text, letterAnimate) {
+      var _this$renderData$id$r;
+
+      this.renderData[id].currentlyDrawing = 0;
+      this.renderData[id].render = [];
+      this.renderData[id].text = text;
+      var shouldAnimate = letterAnimate(text);
+      this.generateRenderData(this.renderData[id]);
+      (_this$renderData$id$r = this.renderData[id].render) === null || _this$renderData$id$r === void 0 ? void 0 : _this$renderData$id$r.forEach(function (item, i) {
+        if (!shouldAnimate.includes(i)) {
+          item.dashOffset = item.pathLength;
+        }
+      });
     }
     /**
      * Creates and returns an SVG element

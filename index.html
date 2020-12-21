@@ -14,36 +14,29 @@
 	</style>
 </head>
 <body>
+    <input type="text" id="text" />
     <div id="container"></div>
 	<script src="./dist/vara.umd.development.js" type="text/javascript"></script>
 	<script>
 		var vara = new Vara("#container","./fonts/Satisfy/SatisfySL.json",[{
-				text:"Vara.js",
-				textAlign:"center",
-				strokeWidth:2.5,
-				y:80,
-				duration:1500,
-			},{
-				text:"A red flare silhouetted the jagged edge of a wing.",
+				text:" ",
 				strokeWidth:1.5,
 				y:40,
 				x:0,
-                duration:5000,
+                duration:500,
                 textAlign: "center",
-			},{
-				text:"Sphinx of black quartz, judge my vow.",
-				strokeWidth:2,
-				color:"blue",
-				id:"sphinx",
-				autoAnimation:false,
-				x:80,
-				duration:4500
+                fontSize: 42
 			}],{
 				fontSize:42
-			});
-			vara.ready(function(){
-				vara.draw("sphinx");
-			})
+            });
+            
+        var tBox = document.querySelector("#text");
+        tBox.addEventListener("input", function(){
+            vara.alterText(0, tBox.value, function(text) {
+                if(text[text.length-1] === " ") return [];
+                return [text.replaceAll(" ","").length-1]
+            })
+        })
 	</script>
 </body>
 </html>

@@ -14,16 +14,14 @@ type VaraGeneralOptions = {
         | number;
     breakWord?: boolean;
     width?: number;
+    lineHeight?: number;
 };
 
 type VaraTextOptions = VaraGeneralOptions & {
     id?: string | number | false;
     x?: number;
     y?: number;
-    fromCurrentPosition?: {
-        x?: boolean;
-        y?: boolean;
-    };
+    absolutePosition?: boolean;
 };
 
 type VaraText = VaraTextOptions & {
@@ -40,6 +38,7 @@ type RenderData = VaraText & {
     }[];
     currentlyDrawing?: number;
     startTime?: number | false;
+    height?: number;
 };
 
 type VaraFontItem = {
@@ -78,6 +77,7 @@ class Vara {
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
     canvasWidth: number;
+    contextHeight: number;
     fontCharacters: {
         [x: string]: VaraFontItem;
     };
@@ -123,6 +123,7 @@ class Vara {
                 global: 0,
             },
             width: this.element.getBoundingClientRect().width,
+            lineHeight: 30,
         };
 
         this.defaultCharacters = {
@@ -161,6 +162,8 @@ class Vara {
         this.WHITESPACE = 10;
         this.SCALEBASE = 16;
 
+        this.contextHeight = 0;
+
         this.init();
     }
 
@@ -182,92 +185,6 @@ class Vara {
             }
         };
         xmlhttp.send(null);
-    }
-
-    preRender() {
-        let svg = this.createSVGNode('svg', {
-            width: '100',
-            height: '100',
-        });
-        svg.style.position = 'absolute';
-        svg.style.zIndex = '-100';
-        svg.style.opacity = '0';
-        svg.style.top = '0';
-
-        document.body.appendChild(svg);
-        let svgPathData = this.createSVGNode('path', {
-            d: '',
-        }) as SVGPathElement;
-        svg.appendChild(svgPathData);
-        this.objectKeys(this.fontCharacters).forEach(char => {
-            this.fontCharacters[char].paths.forEach((path, i) => {
-                svgPathData.setAttributeNS(null, 'd', path.d);
-                this.fontCharacters[char].paths[
-                    i
-                ].dx = svgPathData.getBoundingClientRect().x;
-                this.fontCharacters[char].paths[
-                    i
-                ].pl = svgPathData.getTotalLength();
-            });
-        });
-
-        this.renderData.forEach(item => {
-            item.currentlyDrawing = 0;
-            item.startTime = false;
-        })
-
-        this.generateRenderData(this.renderData[1]);
-    }
-
-    render(rafTime=0) {
-        this.ctx.clearRect(0, 0, 800, 800);
-        this.draw(this.renderData[1], rafTime);
-        window.requestAnimationFrame((time) => this.render(time));
-    }
-
-    draw(_textItem: RenderData, rafTime: number) {
-        const textItem = <Required<RenderData>>_textItem;
-        this.ctx.strokeStyle = textItem.color;
-        this.ctx.lineWidth = textItem.strokeWidth;
-        this.ctx.fillStyle = 'transparent';
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-
-        let scale = textItem.fontSize / this.SCALEBASE;
-
-        const totalPathLength = textItem.render.reduce((a,c) => a+c.pathLength, 0);
-
-        if(!textItem.startTime) {
-            textItem.startTime = rafTime;
-        }
-
-        textItem.render.forEach((item, itemIndex) => {
-            
-            const pathDuration = ((item.pathLength / totalPathLength) * textItem.duration)/1000;
-            const delta = (rafTime - (textItem.startTime as number)) / 1000;
-
-            const speed = item.pathLength / pathDuration;
-
-            this.ctx.save();
-            this.ctx.scale(scale, scale);
-
-            this.ctx.setLineDash([item.dashOffset, item.pathLength]);
-            if(textItem.currentlyDrawing === itemIndex) {
-                console.log(textItem.currentlyDrawing, speed, delta);
-                if(item.dashOffset >= item.pathLength) {
-                    textItem.currentlyDrawing+= 1;
-                }
-                item.dashOffset+= speed * delta;
-            }
-            
-            this.ctx.stroke(
-                new Path2D(this.processPath(item.path, item.x, item.y))
-            );
-            this.ctx.restore();
-        });
-
-        textItem.startTime = rafTime;
-        
     }
 
     /**
@@ -309,6 +226,99 @@ class Vara {
         });
     }
 
+    preRender() {
+        let svg = this.createSVGNode('svg', {
+            width: '100',
+            height: '100',
+        });
+        svg.style.position = 'absolute';
+        svg.style.zIndex = '-100';
+        svg.style.opacity = '0';
+        svg.style.top = '0';
+
+        document.body.appendChild(svg);
+        let svgPathData = this.createSVGNode('path', {
+            d: '',
+        }) as SVGPathElement;
+        svg.appendChild(svgPathData);
+        this.objectKeys(this.fontCharacters).forEach(char => {
+            this.fontCharacters[char].paths.forEach((path, i) => {
+                svgPathData.setAttributeNS(null, 'd', path.d);
+                this.fontCharacters[char].paths[
+                    i
+                ].dx = svgPathData.getBoundingClientRect().x;
+                this.fontCharacters[char].paths[
+                    i
+                ].pl = svgPathData.getTotalLength();
+            });
+        });
+
+        this.renderData.forEach(item => {
+            item.currentlyDrawing = 0;
+            item.startTime = false;
+        });
+
+        this.generateRenderData(this.renderData[0]);
+    }
+
+    render(rafTime = 0) {
+        let canvasHeight = this.calculateCanvasHeight();
+        if (canvasHeight !== this.canvas.height) {
+            this.canvas.height = canvasHeight;
+        }
+        this.ctx.clearRect(0, 0, 800, canvasHeight);
+        this.draw(this.renderData[0], rafTime);
+        window.requestAnimationFrame(time => this.render(time));
+    }
+
+    draw(_textItem: RenderData, rafTime: number) {
+        const textItem = <Required<RenderData>>_textItem;
+        this.ctx.strokeStyle = textItem.color;
+        this.ctx.lineWidth = textItem.strokeWidth;
+        this.ctx.fillStyle = 'transparent';
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+
+        let scale = textItem.fontSize / this.SCALEBASE;
+
+        const totalPathLength = textItem.render.reduce(
+            (a, c) => a + c.pathLength,
+            0
+        );
+
+        if (!textItem.startTime) {
+            textItem.startTime = rafTime;
+        }
+
+        textItem.render.forEach((item, itemIndex) => {
+            const pathDuration =
+                ((item.pathLength / totalPathLength) * textItem.duration) /
+                1000;
+            const delta = (rafTime - (textItem.startTime as number)) / 1000;
+
+            const speed = item.pathLength / pathDuration;
+
+            this.ctx.save();
+            this.ctx.scale(scale, scale);
+
+            this.ctx.lineDashOffset = 1;
+            this.ctx.setLineDash([item.dashOffset, item.pathLength + 1]);
+            if (textItem.currentlyDrawing === itemIndex) {
+                if (item.dashOffset >= item.pathLength) {
+                    textItem.currentlyDrawing += 1;
+                }
+                item.dashOffset += speed * delta;
+            }
+
+            this.ctx.stroke(
+                new Path2D(this.processPath(item.path, item.x, item.y))
+            );
+            this.ctx.restore();
+        });
+
+        textItem.startTime = rafTime;
+    }
+
     /**
      * Calculates the position of each item on the canvas and returns the data required to render it.
      * @param {RenderData} _textItem A single text block that needs to be rendered.
@@ -316,6 +326,7 @@ class Vara {
     generateRenderData(_textItem: RenderData) {
         const textItem = <Required<RenderData>>_textItem;
         let scale = textItem.fontSize / this.SCALEBASE;
+        textItem.height = 0;
         // TODO: Create non breaking text
         if (!textItem.breakWord) {
             const textBlock =
@@ -381,18 +392,16 @@ class Vara {
             });
 
             let posX = textItem.x / scale,
-                posY = textItem.y / scale,
-                top = textItem.fontSize * 1.2;
+                posY = this.getTopPosition(0) / scale + textItem.y / scale,
+                top = textItem.lineHeight;
 
+            if (!textItem.render) {
+                textItem.render = [];
+            }
             lines.forEach(line => {
                 let left = 0;
                 let x = posX,
                     y = posY;
-                console.log(
-                    textItem.width,
-                    line.width,
-                    textItem.width - line.width
-                );
                 if (textItem.textAlign === 'center') {
                     x = (textItem.width - line.width) / 2 / scale;
                 }
@@ -404,25 +413,60 @@ class Vara {
                             this.fontCharacters[letter.charCodeAt(0)] ||
                             this.fontCharacters['63'];
 
-                        if (!textItem.render) {
-                            textItem.render = [];
-                        }
                         currentLetter.paths.forEach(path => {
                             textItem.render.push({
                                 path: path.d,
                                 x: x + left + path.mx - path.dx,
                                 y: y + top - path.my,
                                 pathLength: path.pl,
-                                dashOffset: 0
+                                dashOffset: 0,
                             });
                         });
 
                         left += currentLetter.w;
                     }
                 });
-                top += 30;
+                top += textItem.lineHeight;
+                if (!textItem.absolutePosition) {
+                    console.log(textItem.height, textItem.lineHeight);
+                    textItem.height += textItem.lineHeight * scale;
+                }
             });
         }
+    }
+
+    calculateCanvasHeight() {
+        let height = 0;
+        this.renderData.forEach(item => {
+            if (item.height && item.y) {
+                height += item.height + item.y;
+            }
+        });
+        return height + 50;
+    }
+
+    getTopPosition(i: number) {
+        if (i === 0) return 0;
+        else return 1;
+    }
+
+    alterText(
+        id: number,
+        text: string,
+        letterAnimate: (text: string) => number[]
+    ) {
+        this.renderData[id].currentlyDrawing = 0;
+        this.renderData[id].render = [];
+        this.renderData[id].text = text;
+
+        let shouldAnimate = letterAnimate(text);
+        this.generateRenderData(this.renderData[id]);
+
+        this.renderData[id].render?.forEach((item, i) => {
+            if (!shouldAnimate.includes(i)) {
+                item.dashOffset = item.pathLength;
+            }
+        });
     }
 
     /**

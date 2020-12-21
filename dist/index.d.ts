@@ -12,15 +12,13 @@ declare type VaraGeneralOptions = {
     } | number;
     breakWord?: boolean;
     width?: number;
+    lineHeight?: number;
 };
 declare type VaraTextOptions = VaraGeneralOptions & {
     id?: string | number | false;
     x?: number;
     y?: number;
-    fromCurrentPosition?: {
-        x?: boolean;
-        y?: boolean;
-    };
+    absolutePosition?: boolean;
 };
 declare type VaraText = VaraTextOptions & {
     text: string;
@@ -35,6 +33,7 @@ declare type RenderData = VaraText & {
     }[];
     currentlyDrawing?: number;
     startTime?: number | false;
+    height?: number;
 };
 declare type VaraFontItem = {
     paths: Array<{
@@ -64,6 +63,7 @@ declare class Vara {
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
     canvasWidth: number;
+    contextHeight: number;
     fontCharacters: {
         [x: string]: VaraFontItem;
     };
@@ -79,19 +79,22 @@ declare class Vara {
     SCALEBASE: number;
     constructor(elem: string, fontSource: string, text: VaraText[], options: VaraGeneralOptions);
     init(): void;
-    preRender(): void;
-    render(rafTime?: number): void;
-    draw(_textItem: RenderData, rafTime: number): void;
     /**
      * Sets default option value for all existing option properties.
      * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
      */
     normalizeOptions(): void;
+    preRender(): void;
+    render(rafTime?: number): void;
+    draw(_textItem: RenderData, rafTime: number): void;
     /**
      * Calculates the position of each item on the canvas and returns the data required to render it.
      * @param {RenderData} _textItem A single text block that needs to be rendered.
      */
     generateRenderData(_textItem: RenderData): void;
+    calculateCanvasHeight(): number;
+    getTopPosition(i: number): 0 | 1;
+    alterText(id: number, text: string, letterAnimate: (text: string) => number[]): void;
     /**
      * Creates and returns an SVG element
      * @param n The name of the SVG node to be created
