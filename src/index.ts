@@ -39,6 +39,10 @@ type RenderData = VaraText & {
     currentlyDrawing?: number;
     startTime?: number | false;
     height?: number;
+    lastRaf?: number;
+    index?: number;
+    finished?: boolean;
+    started?: boolean;
 };
 
 type VaraFontItem = {
@@ -253,12 +257,15 @@ class Vara {
             });
         });
 
-        this.renderData.forEach(item => {
+        this.renderData.forEach((item, index) => {
             item.currentlyDrawing = 0;
             item.startTime = false;
+
+            item.index = index;
+            this.generateRenderData(item);
         });
 
-        this.generateRenderData(this.renderData[0]);
+        console.log(this.renderData);
     }
 
     render(rafTime = 0) {
@@ -267,7 +274,19 @@ class Vara {
             this.canvas.height = canvasHeight;
         }
         this.ctx.clearRect(0, 0, 800, canvasHeight);
-        this.draw(this.renderData[0], rafTime);
+
+        const firstQueued = this.renderData.find(item => item.queued);
+        if (firstQueued) {
+            firstQueued.started = true;
+        }
+
+        this.renderData.forEach(item => {
+            if (!item.queued) {
+                item.started = true;
+            }
+            this.draw(item, rafTime);
+        });
+
         window.requestAnimationFrame(time => this.render(time));
     }
 
@@ -288,24 +307,50 @@ class Vara {
 
         if (!textItem.startTime) {
             textItem.startTime = rafTime;
+            textItem.lastRaf = rafTime;
         }
 
         textItem.render.forEach((item, itemIndex) => {
-            const pathDuration =
-                ((item.pathLength / totalPathLength) * textItem.duration) /
-                1000;
-            const delta = (rafTime - (textItem.startTime as number)) / 1000;
 
-            const speed = item.pathLength / pathDuration;
+            if(!textItem.started) {
+                return;
+            }
 
             this.ctx.save();
             this.ctx.scale(scale, scale);
 
             this.ctx.lineDashOffset = 1;
             this.ctx.setLineDash([item.dashOffset, item.pathLength + 1]);
+
+            if (textItem.finished) {
+                this.ctx.stroke(
+                    new Path2D(this.processPath(item.path, item.x, item.y))
+                );
+                this.ctx.restore();
+                return;
+            }
+
+            const delta = (rafTime - (textItem.startTime as number)) / 1000;
+            if (textItem.started && textItem.delay > 0) {
+                textItem.delay-= rafTime-textItem.lastRaf;
+                textItem.lastRaf = rafTime;
+                return;
+            }
+
+
+            const pathDuration =
+                ((item.pathLength / totalPathLength) * textItem.duration) /
+                1000;
+
+            const speed = item.pathLength / pathDuration;
+
             if (textItem.currentlyDrawing === itemIndex) {
                 if (item.dashOffset >= item.pathLength) {
                     textItem.currentlyDrawing += 1;
+                    if (textItem.currentlyDrawing >= textItem.render.length) {
+                        textItem.finished = true;
+                        this.startDrawingNext(textItem.index);
+                    }
                 }
                 item.dashOffset += speed * delta;
             }
@@ -392,7 +437,9 @@ class Vara {
             });
 
             let posX = textItem.x / scale,
-                posY = this.getTopPosition(0) / scale + textItem.y / scale,
+                posY =
+                    this.getTopPosition(textItem.index) / scale +
+                    textItem.y / scale,
                 top = textItem.lineHeight;
 
             if (!textItem.render) {
@@ -427,10 +474,10 @@ class Vara {
                     }
                 });
                 top += textItem.lineHeight;
-                if (!textItem.absolutePosition) {
-                    console.log(textItem.height, textItem.lineHeight);
-                    textItem.height += textItem.lineHeight * scale;
-                }
+                textItem.height += textItem.lineHeight * scale;
+                // if (!textItem.absolutePosition) {
+                //     console.log(textItem.height, textItem.lineHeight);
+                // }
             });
         }
     }
@@ -447,7 +494,15 @@ class Vara {
 
     getTopPosition(i: number) {
         if (i === 0) return 0;
-        else return 1;
+        else {
+            let topPosition = 0;
+            this.renderData.slice(0, i).forEach(item => {
+                if (!item.absolutePosition) {
+                    topPosition += (item.height ?? 0) + (item.y ?? 0);
+                }
+            });
+            return topPosition;
+        }
     }
 
     alterText(
@@ -467,6 +522,12 @@ class Vara {
                 item.dashOffset = item.pathLength;
             }
         });
+    }
+
+    startDrawingNext(current: number) {
+        if (current + 1 < this.renderData.length) {
+            this.renderData[current + 1].started = true;
+        }
     }
 
     /**
