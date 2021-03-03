@@ -1,7 +1,8 @@
-(function (factory) {
-  typeof define === 'function' && define.amd ? define(factory) :
-  factory();
-}((function () { 'use strict';
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = global || self, factory(global.vara = {}));
+}(this, (function (exports) { 'use strict';
 
   function _extends() {
     _extends = Object.assign || function (target) {
@@ -21,6 +22,515 @@
     return _extends.apply(this, arguments);
   }
 
+  function _inheritsLoose(subClass, superClass) {
+    subClass.prototype = Object.create(superClass.prototype);
+    subClass.prototype.constructor = subClass;
+    subClass.__proto__ = superClass;
+  }
+
+  function _assertThisInitialized(self) {
+    if (self === void 0) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return self;
+  }
+
+  var SCALEBASE = 16;
+  var WHITESPACE = 10;
+
+  var BLOCK_COMPOSITION = ["block", "line", "letter", "letterPart"];
+
+  var RenderBase = /*#__PURE__*/function () {
+    function RenderBase(props) {
+      var _props$parent;
+
+      this.ctx = props.ctx;
+      this.parent = (_props$parent = props.parent) !== null && _props$parent !== void 0 ? _props$parent : null;
+      this.name = 'block';
+    }
+
+    var _proto = RenderBase.prototype;
+
+    _proto.getParent = function getParent(parentName, current) {
+      var parentIndex = BLOCK_COMPOSITION.indexOf(parentName);
+      var currentItemIndex = BLOCK_COMPOSITION.indexOf(this.name);
+
+      if (parentIndex < currentItemIndex) {
+        if (current.name === parentName) {
+          return current;
+        } else {
+          if (current.parent) return this.getParent(parentName, current === null || current === void 0 ? void 0 : current.parent);else return false;
+        }
+      } else {
+        return false;
+      }
+    };
+
+    return RenderBase;
+  }();
+
+  var LetterPart = /*#__PURE__*/function (_RenderBase) {
+    _inheritsLoose(LetterPart, _RenderBase);
+
+    function LetterPart(props) {
+      var _this;
+
+      _this = _RenderBase.call(this, props) || this;
+      _this.x = props.x;
+      _this.y = props.y;
+      _this.path = props.path;
+      _this.pathLength = props.pathLength;
+      _this.dashOffset = props.dashOffset;
+      _this.width = props.width;
+      _this.name = 'letterPart';
+      _this.rootBlock = _this.getParent('block', _assertThisInitialized(_this));
+      return _this;
+    }
+    /**
+     * Paints the path
+     */
+
+
+    var _proto = LetterPart.prototype;
+
+    _proto.paint = function paint() {
+      // console.log(this.x,this.y);
+      this.ctx.save();
+      this.ctx.stroke(new Path2D(this.processPath(this.path, this.x, this.y)));
+      this.ctx.restore();
+    }
+    /**
+     * Increments the dashOffset and then paints the path.
+     */
+    ;
+
+    _proto.draw = function draw(delta) {
+      var pathDuration = this.pathLength / this.rootBlock.totalPathLength * this.rootBlock.options.duration / 1000;
+      var speed = this.pathLength / pathDuration;
+      this.ctx.save();
+      this.ctx.lineDashOffset = 1;
+      this.ctx.setLineDash([this.dashOffset, this.pathLength + 1]);
+      this.dashOffset += speed * delta;
+      this.paint();
+      this.ctx.restore();
+    };
+
+    _proto.processPath = function processPath(path, x, y) {
+      if (x === void 0) {
+        x = 0;
+      }
+
+      if (y === void 0) {
+        y = 0;
+      }
+
+      var svgPath = path.split('');
+      svgPath[2] = x + '';
+      svgPath[4] = y + '';
+      return svgPath.join('');
+    };
+
+    return LetterPart;
+  }(RenderBase);
+
+  var Letter = /*#__PURE__*/function (_RenderBase) {
+    _inheritsLoose(Letter, _RenderBase);
+
+    function Letter(props) {
+      var _this;
+
+      _this = _RenderBase.call(this, props) || this;
+      _this.x = props.x;
+      _this.y = props.y;
+      _this.width = props.width;
+      _this.parts = [];
+      _this.drawnParts = [];
+      _this.name = "letter";
+      _this.rootBlock = _this.getParent("block", _assertThisInitialized(_this));
+      return _this;
+    }
+
+    var _proto = Letter.prototype;
+
+    _proto.setPosition = function setPosition(x, y) {
+      this.x = x;
+      this.y = y;
+    }
+    /**
+     * Add a new part to the queue
+     * @param part The part to be added
+     */
+    ;
+
+    _proto.addPart = function addPart(part) {
+      this.parts.push(new LetterPart(_extends({}, part, {
+        ctx: this.ctx,
+        parent: this
+      }))); // Update the total path length stored in the main block.
+
+      if (this.rootBlock) {
+        this.rootBlock.modifyPathLength(part.pathLength, "increment");
+      }
+    }
+    /**
+     * Remove the first item from the queue. Used when a part has been drawn completely.
+     *
+     * The removed item is moved to the drawnParts array
+     */
+    ;
+
+    _proto.dequeue = function dequeue() {
+      var removedItem = this.parts.shift();
+      if (removedItem) this.drawnParts.push(removedItem);
+    }
+    /**
+     * Render the current letter
+     * @param rafTime The time value received from requestAnimationFrame
+     */
+    ;
+
+    _proto.render = function render(rafTime, previousRAFTime) {
+      this.ctx.save();
+      this.ctx.scale(this.rootBlock.scale, this.rootBlock.scale);
+      this.ctx.translate(this.x, this.y);
+      var delta = (rafTime - previousRAFTime) / 1000;
+
+      if (this.parts.length > 0) {
+        var part = this.parts[0];
+
+        if (part.dashOffset > part.pathLength) {
+          this.dequeue();
+        } else {
+          part.draw(delta);
+        }
+      }
+
+      this.drawnParts.forEach(function (drawnPart) {
+        drawnPart.paint();
+      });
+      this.ctx.restore();
+    }
+    /**
+     * Paints the paths whose animations are complete
+     */
+    ;
+
+    _proto.paint = function paint() {
+      this.ctx.save();
+      this.ctx.scale(this.rootBlock.scale, this.rootBlock.scale);
+      this.ctx.translate(this.x, this.y);
+      this.drawnParts.forEach(function (drawnPart) {
+        drawnPart.paint();
+      });
+      this.ctx.restore();
+    };
+
+    return Letter;
+  }(RenderBase);
+
+  var Line = /*#__PURE__*/function (_RenderBase) {
+    _inheritsLoose(Line, _RenderBase);
+
+    function Line(props) {
+      var _this;
+
+      _this = _RenderBase.call(this, props) || this;
+      _this.x = props.x;
+      _this.y = props.y;
+      _this.ctx = props.ctx;
+      _this.letters = [];
+      _this.drawnLetters = [];
+      _this.name = "line";
+      return _this;
+    }
+
+    var _proto = Line.prototype;
+
+    _proto.addLetter = function addLetter(letter) {
+      console.log('adding letter', this.name);
+      var newLetter = new Letter(_extends({}, letter, {
+        parent: this,
+        ctx: this.ctx
+      }));
+      this.letters.push(newLetter);
+      return newLetter;
+    }
+    /**
+     * Remove the first item from the queue. Used when a letter has been drawn completely.
+     * The removed item is moved to the drawnLetters array
+     */
+    ;
+
+    _proto.dequeue = function dequeue() {
+      var removedItem = this.letters.shift();
+      if (removedItem) this.drawnLetters.push(removedItem);
+    }
+    /**
+     * Render the current line
+     * @param rafTime The time value received from requestAnimationFrame
+     */
+    ;
+
+    _proto.render = function render(rafTime, prevRAFTime) {
+      this.ctx.save();
+      this.ctx.translate(this.x, this.y);
+
+      if (this.letters.length > 0) {
+        var currentLetter = this.letters[0];
+        currentLetter.render(rafTime, prevRAFTime);
+
+        if (currentLetter.parts.length === 0) {
+          this.dequeue();
+        }
+      }
+
+      this.drawnLetters.forEach(function (letter) {
+        letter.paint();
+      });
+      this.ctx.restore();
+    };
+
+    _proto.paint = function paint() {
+      this.ctx.save();
+      this.ctx.translate(this.x, this.y);
+      this.drawnLetters.forEach(function (letter) {
+        letter.paint();
+      });
+      this.ctx.restore();
+    };
+
+    return Line;
+  }(RenderBase);
+
+  var Block = /*#__PURE__*/function (_RenderBase) {
+    _inheritsLoose(Block, _RenderBase);
+
+    function Block(props) {
+      var _this;
+
+      _this = _RenderBase.call(this, props) || this;
+      _this.x = props.x;
+      _this.y = props.y;
+      _this.width = props.width;
+      _this.lines = [];
+      _this.drawnLines = [];
+      _this.ctx = props.ctx;
+      _this.previousRAFTime = 0;
+      _this.totalPathLength = 0;
+      _this.options = props.options;
+      _this.name = 'block';
+      _this.scale = props.options.fontSize / SCALEBASE;
+      return _this;
+    }
+    /**
+     * Creates and adds a new line of text
+     * @param line The properties of the line to be added
+     */
+
+
+    var _proto = Block.prototype;
+
+    _proto.addLine = function addLine(line) {
+      var newLine = new Line(_extends({}, line, {
+        ctx: this.ctx,
+        parent: this
+      }));
+      this.lines.push(newLine);
+      return newLine;
+    }
+    /**
+     * Remove the first item from the queue. Used when a text line has been drawn completely.
+     *
+     * The removed item is moved to the drawnParts array
+     */
+    ;
+
+    _proto.dequeue = function dequeue() {
+      var removedItem = this.lines.shift();
+      if (removedItem) this.lines.push(removedItem);
+    }
+    /**
+     * Increment or decrement the total path length
+     * @param pathLength Path length that is to be incremented or decrement
+     * @param action Whether to increment or decrement
+     */
+    ;
+
+    _proto.modifyPathLength = function modifyPathLength(pathLength, action) {
+      if (action === void 0) {
+        action = 'increment';
+      }
+
+      if (action === 'increment') {
+        this.totalPathLength += pathLength;
+      } else {
+        this.totalPathLength -= pathLength;
+      }
+
+      return this.totalPathLength;
+    }
+    /**
+     * Render the block
+     * @param rafTime The time value received from requestAnimationFrame
+     */
+    ;
+
+    _proto.render = function render(rafTime) {
+      if (this.previousRAFTime === 0) {
+        this.previousRAFTime = rafTime;
+      }
+
+      this.ctx.save();
+      this.ctx.strokeStyle = this.options.color;
+      this.ctx.lineWidth = this.options.strokeWidth;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.drawnLines.forEach(function (line) {
+        line.paint();
+      });
+
+      if (this.lines.length > 0) {
+        var line = this.lines[0];
+        line.render(rafTime, this.previousRAFTime);
+
+        if (line.letters.length === 0) {
+          this.dequeue();
+        }
+      }
+
+      this.ctx.restore();
+      this.previousRAFTime = rafTime;
+    };
+
+    return Block;
+  }(RenderBase);
+
+  var RenderItem = /*#__PURE__*/function () {
+    function RenderItem(props) {
+      this.textItem = _extends({}, props.options, props.textItem);
+      console.log(this.textItem);
+      this.height = 0;
+      this.fontCharacters = props.fontCharacters;
+      this.ctx = props.ctx;
+      this.block = null;
+    }
+
+    var _proto = RenderItem.prototype;
+
+    _proto.generatePositions = function generatePositions() {
+      var _this = this;
+
+      var scale = this.textItem.fontSize / SCALEBASE;
+      this.height = 0; // TODO: Create non breaking text
+
+      if (!this.textItem.breakWord) {
+        var textBlock = typeof this.textItem.text === 'string' ? [this.textItem.text] : this.textItem.text;
+        var breakedTextBlock = textBlock.map(function (line) {
+          return line.split(' ');
+        });
+        var lines = [{
+          text: '',
+          width: 0
+        }];
+        breakedTextBlock.forEach(function (line) {
+          var spaceWidth = 0;
+          line.forEach(function (word) {
+            var wordWidth = 0;
+            word.split('').forEach(function (letter) {
+              var charCode = letter.charCodeAt(0);
+              var currentLetter = _this.fontCharacters[charCode] || _this.fontCharacters['63'];
+              var pathPositionCorrection = currentLetter.paths.reduce(function (a, c) {
+                return a + c.mx - c.dx;
+              }, 0);
+              wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
+            });
+
+            if (lines[lines.length - 1].width + wordWidth + 5 * scale + spaceWidth + _this.textItem.x * scale > _this.textItem.width) {
+              lines.push({
+                text: word + ' ',
+                width: wordWidth
+              });
+              spaceWidth = 0;
+            } else {
+              lines[lines.length - 1] = {
+                text: lines[lines.length - 1].text + word,
+                width: lines[lines.length - 1].width + wordWidth
+              };
+              spaceWidth += WHITESPACE * scale;
+              lines[lines.length - 1].text += ' ';
+            }
+          });
+        });
+        var top = this.textItem.lineHeight;
+        var block = new Block({
+          width: this.textItem.width,
+          x: this.textItem.x,
+          y: this.textItem.y,
+          ctx: this.ctx,
+          options: this.textItem
+        });
+        lines.forEach(function (line) {
+          var left = 0;
+          var x = 0,
+              y = 0;
+
+          if (_this.textItem.textAlign === 'center') {
+            x = (_this.textItem.width - line.width) / 2;
+          }
+
+          var lineClass = block.addLine({
+            x: x,
+            y: y
+          });
+          line.text.split('').forEach(function (letter) {
+            console.log(letter);
+
+            if (letter === ' ') {
+              left += WHITESPACE;
+            } else {
+              var currentLetter = _this.fontCharacters[letter.charCodeAt(0)] || _this.fontCharacters['63'];
+
+              var letterClass = lineClass.addLetter({
+                x: left,
+                y: top,
+                width: currentLetter.w
+              });
+              currentLetter.paths.forEach(function (path) {
+                letterClass.addPart({
+                  path: path.d,
+                  x: path.mx - path.dx,
+                  y: -path.my,
+                  pathLength: path.pl,
+                  dashOffset: 0,
+                  width: path.w
+                });
+              });
+              left += currentLetter.w;
+            }
+          });
+          top += _this.textItem.lineHeight;
+          _this.height += _this.textItem.lineHeight * scale;
+        });
+        this.block = block;
+      }
+    };
+
+    _proto.render = function render(rafTime) {
+      if (this.block) {
+        this.block.render(rafTime);
+      }
+    };
+
+    _proto.rendered = function rendered() {
+      var _this$block;
+
+      return ((_this$block = this.block) === null || _this$block === void 0 ? void 0 : _this$block.lines.length) === 0;
+    };
+
+    return RenderItem;
+  }();
+
   var Vara = /*#__PURE__*/function () {
     function Vara(elem, fontSource, text, options) {
       this.elementName = elem;
@@ -28,7 +538,10 @@
       this.fontSource = fontSource;
       this.options = options;
       this.textItems = text;
-      this.renderData = text;
+      this.renderData = {
+        nonQueued: [],
+        queued: []
+      };
       this.rendered = false;
       this.fontCharacters = {};
       this.canvasWidth = 0;
@@ -51,23 +564,23 @@
       this.defaultCharacters = {
         '63': {
           paths: [{
-            w: 8.643798828125,
-            h: 14.231731414794922,
-            my: 22.666500004827977,
+            w: 8.6437,
+            h: 14.23173,
+            my: 22.6665,
             mx: 0,
             dx: 0,
             d: 'm 0,0 c -2,-6.01,5,-8.64,8,-3.98,2,4.09,-7,8.57,-7,11.85',
             pl: 1
           }, {
-            w: 1.103759765625,
-            h: 1.549820899963379,
-            my: 8.881500004827977,
+            w: 1.1037,
+            h: 1.5498,
+            my: 8.8815,
             dx: 0,
             mx: 1,
             d: 'm 0,0 a 0.7592,0.7357,0,0,1,0,0.735,0.7592,0.7357,0,0,1,-1,-0.735,0.7592,0.7357,0,0,1,1,-0.738,0.7592,0.7357,0,0,1,0,0.738 z',
             pl: 1
           }],
-          w: 8.643798828125
+          w: 8.6437
         }
       };
       this.canvas = document.createElement('canvas');
@@ -99,13 +612,16 @@
 
             _this.preRender();
 
-            _this.render(); //window.requestAnimationFrame()
-
+            _this.render();
           }
         }
       };
 
       xmlhttp.send(null);
+    };
+
+    _proto.onDraw = function onDraw(fn) {
+      this.onDrawF = fn;
     }
     /**
      * Sets default option value for all existing option properties.
@@ -117,30 +633,17 @@
       var _this2 = this;
 
       this.options = this.options || {};
-      this.objectKeys(this.defaultOptions).forEach(function (optionKey) {
-        if (_this2.options[optionKey] === undefined) {
-          // @ts-ignore
-          _this2.options[optionKey] = _this2.defaultOptions[optionKey];
-        }
-      });
-      this.renderData.forEach(function (textItem, i) {
-        if (typeof textItem === 'string') {
-          _this2.renderData[i] = _extends({
-            text: textItem
-          }, _this2.defaultOptions);
-        } else if (typeof textItem === 'object') {
-          _this2.objectKeys(_this2.options).forEach(function (option) {
-            if (textItem[option] === undefined) // @ts-ignore
-              textItem[option] = _this2.options[option];
-          });
-        }
-      });
+      this.options = _extends({}, this.defaultOptions, this.options);
       Object.keys(this.defaultCharacters).forEach(function (character) {
         if (_this2.fontCharacters[character] === undefined) {
           _this2.fontCharacters[character] = _this2.defaultCharacters[character];
         }
       });
-    };
+    }
+    /**
+     * Performs some actions before rendering starts. These include finding the pathLength of each path and generating the render data.
+     */
+    ;
 
     _proto.preRender = function preRender() {
       var _this3 = this;
@@ -165,11 +668,21 @@
           _this3.fontCharacters[_char].paths[i].pl = svgPathData.getTotalLength();
         });
       });
-      this.renderData.forEach(function (item) {
-        item.currentlyDrawing = 0;
-        item.startTime = false;
+      this.textItems.forEach(function (item) {
+        var renderItem = new RenderItem({
+          fontCharacters: _this3.fontCharacters,
+          options: _this3.options,
+          textItem: item,
+          ctx: _this3.ctx
+        });
+        renderItem.generatePositions();
+
+        if (item.queued) {
+          _this3.renderData.queued.push(renderItem);
+        } else {
+          _this3.renderData.nonQueued.push(renderItem);
+        }
       });
-      this.generateRenderData(this.renderData[0]);
     };
 
     _proto.render = function render(rafTime) {
@@ -185,181 +698,44 @@
         this.canvas.height = canvasHeight;
       }
 
-      this.ctx.clearRect(0, 0, 800, canvasHeight);
-      this.draw(this.renderData[0], rafTime);
+      this.ctx.clearRect(0, 0, this.canvas.width, canvasHeight);
+      this.renderData.nonQueued.forEach(function (item) {
+        item.render(rafTime);
+      });
+
+      if (this.renderData.queued.length > 0) {
+        var queueHead = this.renderData.queued[0];
+        queueHead.render(rafTime);
+
+        if (queueHead.rendered()) {
+          this.dequeue();
+        }
+      }
+
       window.requestAnimationFrame(function (time) {
         return _this4.render(time);
       });
-    };
-
-    _proto.draw = function draw(_textItem, rafTime) {
-      var _this5 = this;
-
-      var textItem = _textItem;
-      this.ctx.strokeStyle = textItem.color;
-      this.ctx.lineWidth = textItem.strokeWidth;
-      this.ctx.fillStyle = 'transparent';
-      this.ctx.lineCap = 'round';
-      this.ctx.lineJoin = 'round';
-      var scale = textItem.fontSize / this.SCALEBASE;
-      var totalPathLength = textItem.render.reduce(function (a, c) {
-        return a + c.pathLength;
-      }, 0);
-
-      if (!textItem.startTime) {
-        textItem.startTime = rafTime;
-      }
-
-      textItem.render.forEach(function (item, itemIndex) {
-        var pathDuration = item.pathLength / totalPathLength * textItem.duration / 1000;
-        var delta = (rafTime - textItem.startTime) / 1000;
-        var speed = item.pathLength / pathDuration;
-
-        _this5.ctx.save();
-
-        _this5.ctx.scale(scale, scale);
-
-        _this5.ctx.lineDashOffset = 1;
-
-        _this5.ctx.setLineDash([item.dashOffset, item.pathLength + 1]);
-
-        if (textItem.currentlyDrawing === itemIndex) {
-          if (item.dashOffset >= item.pathLength) {
-            textItem.currentlyDrawing += 1;
-          }
-
-          item.dashOffset += speed * delta;
-        }
-
-        _this5.ctx.stroke(new Path2D(_this5.processPath(item.path, item.x, item.y)));
-
-        _this5.ctx.restore();
-      });
-      textItem.startTime = rafTime;
     }
     /**
-     * Calculates the position of each item on the canvas and returns the data required to render it.
-     * @param {RenderData} _textItem A single text block that needs to be rendered.
+     * Remove the first item from the queue. Used when a block has been drawn completely.
+     * The removed item is moved to the drawnLetters array
      */
     ;
 
-    _proto.generateRenderData = function generateRenderData(_textItem) {
-      var _this6 = this;
-
-      var textItem = _textItem;
-      var scale = textItem.fontSize / this.SCALEBASE;
-      textItem.height = 0; // TODO: Create non breaking text
-
-      if (!textItem.breakWord) {
-        var textBlock = typeof textItem.text === 'string' ? [textItem.text] : textItem.text;
-        var breakedTextBlock = textBlock.map(function (line) {
-          return line.split(' ');
-        });
-        var lines = [{
-          text: '',
-          width: 0
-        }];
-        breakedTextBlock.forEach(function (line) {
-          var spaceWidth = 0;
-          line.forEach(function (word) {
-            var wordWidth = 0;
-            word.split('').forEach(function (letter) {
-              var charCode = letter.charCodeAt(0);
-              var currentLetter = _this6.fontCharacters[charCode] || _this6.fontCharacters['63'];
-              var pathPositionCorrection = currentLetter.paths.reduce(function (a, c) {
-                return a + c.mx - c.dx;
-              }, 0);
-              wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
-            });
-
-            if (lines[lines.length - 1].width + wordWidth + 5 * scale + spaceWidth + textItem.x * scale > textItem.width) {
-              lines.push({
-                text: word + ' ',
-                width: wordWidth
-              });
-              spaceWidth = 0;
-            } else {
-              lines[lines.length - 1] = {
-                text: lines[lines.length - 1].text + word,
-                width: lines[lines.length - 1].width + wordWidth
-              };
-              spaceWidth += _this6.WHITESPACE * scale;
-              lines[lines.length - 1].text += ' ';
-            }
-          });
-        });
-        var posX = textItem.x / scale,
-            posY = this.getTopPosition(0) / scale + textItem.y / scale,
-            top = textItem.lineHeight;
-
-        if (!textItem.render) {
-          textItem.render = [];
-        }
-
-        lines.forEach(function (line) {
-          var left = 0;
-          var x = posX,
-              y = posY;
-
-          if (textItem.textAlign === 'center') {
-            x = (textItem.width - line.width) / 2 / scale;
-          }
-
-          line.text.split('').forEach(function (letter) {
-            if (letter === ' ') {
-              left += _this6.WHITESPACE;
-            } else {
-              var currentLetter = _this6.fontCharacters[letter.charCodeAt(0)] || _this6.fontCharacters['63'];
-
-              currentLetter.paths.forEach(function (path) {
-                textItem.render.push({
-                  path: path.d,
-                  x: x + left + path.mx - path.dx,
-                  y: y + top - path.my,
-                  pathLength: path.pl,
-                  dashOffset: 0
-                });
-              });
-              left += currentLetter.w;
-            }
-          });
-          top += textItem.lineHeight;
-
-          if (!textItem.absolutePosition) {
-            console.log(textItem.height, textItem.lineHeight);
-            textItem.height += textItem.lineHeight * scale;
-          }
-        });
-      }
-    };
+    _proto.dequeue = function dequeue() {
+      var removedItem = this.renderData.queued.shift();
+      if (removedItem) this.renderData.nonQueued.push(removedItem);
+    } // TODO: Make proper calculation function.
+    ;
 
     _proto.calculateCanvasHeight = function calculateCanvasHeight() {
       var height = 0;
-      this.renderData.forEach(function (item) {
-        if (item.height && item.y) {
-          height += item.height + item.y;
+      [].concat(this.renderData.nonQueued, this.renderData.queued).forEach(function (item) {
+        if (item.height && item.textItem.y) {
+          height += item.height + item.textItem.y;
         }
       });
       return height + 50;
-    };
-
-    _proto.getTopPosition = function getTopPosition(i) {
-      if (i === 0) return 0;else return 1;
-    };
-
-    _proto.alterText = function alterText(id, text, letterAnimate) {
-      var _this$renderData$id$r;
-
-      this.renderData[id].currentlyDrawing = 0;
-      this.renderData[id].render = [];
-      this.renderData[id].text = text;
-      var shouldAnimate = letterAnimate(text);
-      this.generateRenderData(this.renderData[id]);
-      (_this$renderData$id$r = this.renderData[id].render) === null || _this$renderData$id$r === void 0 ? void 0 : _this$renderData$id$r.forEach(function (item, i) {
-        if (!shouldAnimate.includes(i)) {
-          item.dashOffset = item.pathLength;
-        }
-      });
     }
     /**
      * Creates and returns an SVG element
@@ -425,6 +801,10 @@
   if (window) {
     window.Vara = Vara;
   }
+
+  exports.default = Vara;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=vara.umd.development.js.map

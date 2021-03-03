@@ -1,60 +1,14 @@
-declare type VaraGeneralOptions = {
-    fontSize?: number;
-    strokeWidth?: number;
-    color?: string;
-    duration?: number;
-    textAlign?: 'left' | 'center' | 'right';
-    autoAnimation?: boolean;
-    queued?: boolean;
-    delay?: number;
-    letterSpacing?: {
-        [x: string]: number;
-    } | number;
-    breakWord?: boolean;
-    width?: number;
-    lineHeight?: number;
-};
-declare type VaraTextOptions = VaraGeneralOptions & {
-    id?: string | number | false;
-    x?: number;
-    y?: number;
-    absolutePosition?: boolean;
-};
-declare type VaraText = VaraTextOptions & {
-    text: string;
-};
-declare type RenderData = VaraText & {
-    render?: {
-        path: string;
-        x: number;
-        y: number;
-        pathLength: number;
-        dashOffset: number;
-    }[];
-    currentlyDrawing?: number;
-    startTime?: number | false;
-    height?: number;
-};
-declare type VaraFontItem = {
-    paths: Array<{
-        w: number;
-        h: number;
-        my: number;
-        mx: number;
-        dx: number;
-        d: string;
-        pl: number;
-    }>;
-    w: number;
-};
-declare type ObjectKeys<T> = T extends object ? (keyof T)[] : T extends number ? [] : T extends Array<any> | string ? string[] : never;
-declare class Vara {
+import { VaraGeneralOptions, VaraText, RenderData, VaraFontItem, ObjectKeys } from './types';
+export default class Vara {
     elementName: string;
     element: HTMLElement;
     fontSource: string;
     options: VaraGeneralOptions;
     textItems: VaraText[];
-    renderData: RenderData[];
+    renderData: {
+        queued: RenderData;
+        nonQueued: RenderData;
+    };
     rendered: boolean;
     defaultOptions: Required<VaraGeneralOptions>;
     defaultCharacters: {
@@ -75,26 +29,28 @@ declare class Vara {
         space: number;
         tf: number;
     };
+    onDrawF?: (fn?: Required<RenderData>) => void;
     WHITESPACE: number;
     SCALEBASE: number;
     constructor(elem: string, fontSource: string, text: VaraText[], options: VaraGeneralOptions);
-    init(): void;
+    private init;
+    onDraw(fn: (a?: Required<RenderData>) => void): void;
     /**
      * Sets default option value for all existing option properties.
      * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
      */
-    normalizeOptions(): void;
-    preRender(): void;
-    render(rafTime?: number): void;
-    draw(_textItem: RenderData, rafTime: number): void;
+    private normalizeOptions;
     /**
-     * Calculates the position of each item on the canvas and returns the data required to render it.
-     * @param {RenderData} _textItem A single text block that needs to be rendered.
+     * Performs some actions before rendering starts. These include finding the pathLength of each path and generating the render data.
      */
-    generateRenderData(_textItem: RenderData): void;
+    private preRender;
+    private render;
+    /**
+     * Remove the first item from the queue. Used when a block has been drawn completely.
+     * The removed item is moved to the drawnLetters array
+     */
+    private dequeue;
     calculateCanvasHeight(): number;
-    getTopPosition(i: number): 0 | 1;
-    alterText(id: number, text: string, letterAnimate: (text: string) => number[]): void;
     /**
      * Creates and returns an SVG element
      * @param n The name of the SVG node to be created
@@ -112,10 +68,4 @@ declare class Vara {
     processPath(path: string, x?: number, y?: number): string;
     objectKeys<T>(x: T): ObjectKeys<T>;
     boundRect(x: number, y: number, w: number, h?: number): void;
-}
-declare class Group {
-    items: any[];
-    x: number;
-    y: number;
-    constructor();
 }

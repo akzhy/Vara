@@ -19,22 +19,21 @@
 	<script src="./dist/vara.umd.development.js" type="text/javascript"></script>
 	<script>
 		var vara = new Vara("#container","./fonts/Satisfy/SatisfySL.json",[{
-				text:" ",
+				text:"Hello there",
 				strokeWidth:1.5,
 				y:40,
 				x:0,
-                duration:500,
+                duration:5000,
                 textAlign: "center",
                 fontSize: 42
 			}],{
 				fontSize:42
             });
             
-        var tBox = document.querySelector("#text");
-        tBox.addEventListener("input", function(){
-            vara.alterText(0, tBox.value, function(text) {
-                if(text[text.length-1] === " ") return [];
-                return [text.replaceAll(" ","").length-1]
+        const input = document.querySelector("#text");
+        input.addEventListener("change", function(text){
+            vara.alterText(0, input.value, function() {
+                return [input.value.length-1];
             })
         })
 	</script>

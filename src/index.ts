@@ -1,78 +1,23 @@
-type VaraGeneralOptions = {
-    fontSize?: number;
-    strokeWidth?: number;
-    color?: string;
-    duration?: number;
-    textAlign?: 'left' | 'center' | 'right';
-    autoAnimation?: boolean;
-    queued?: boolean;
-    delay?: number;
-    letterSpacing?:
-        | {
-              [x: string]: number;
-          }
-        | number;
-    breakWord?: boolean;
-    width?: number;
-    lineHeight?: number;
-};
+import {
+    VaraGeneralOptions,
+    VaraText,
+    RenderData,
+    VaraFontItem,
+    ObjectKeys,
+    VaraTextOptions,
+} from './types';
+import RenderItem from './utils/renderitem';
 
-type VaraTextOptions = VaraGeneralOptions & {
-    id?: string | number | false;
-    x?: number;
-    y?: number;
-    absolutePosition?: boolean;
-};
-
-type VaraText = VaraTextOptions & {
-    text: string;
-};
-
-type RenderData = VaraText & {
-    render?: {
-        path: string;
-        x: number;
-        y: number;
-        pathLength: number;
-        dashOffset: number;
-    }[];
-    currentlyDrawing?: number;
-    startTime?: number | false;
-    height?: number;
-    lastRaf?: number;
-    index?: number;
-    finished?: boolean;
-    started?: boolean;
-};
-
-type VaraFontItem = {
-    paths: Array<{
-        w: number;
-        h: number;
-        my: number;
-        mx: number;
-        dx: number;
-        d: string;
-        pl: number;
-    }>;
-    w: number;
-};
-
-type ObjectKeys<T> = T extends object
-    ? (keyof T)[]
-    : T extends number
-    ? []
-    : T extends Array<any> | string
-    ? string[]
-    : never;
-
-class Vara {
+export default class Vara {
     elementName: string;
     element: HTMLElement;
     fontSource: string;
     options: VaraGeneralOptions;
     textItems: VaraText[];
-    renderData: RenderData[];
+    renderData: {
+        queued: RenderData;
+        nonQueued: RenderData;
+    };
     rendered: boolean;
     defaultOptions: Required<VaraGeneralOptions>;
     defaultCharacters: {
@@ -94,6 +39,7 @@ class Vara {
         space: number;
         tf: number;
     };
+    onDrawF?: (fn?: Required<RenderData>) => void;
     WHITESPACE: number;
     SCALEBASE: number;
 
@@ -108,7 +54,10 @@ class Vara {
         this.fontSource = fontSource;
         this.options = options;
         this.textItems = text;
-        this.renderData = text;
+        this.renderData = {
+            nonQueued: [],
+            queued: [],
+        };
         this.rendered = false;
         this.fontCharacters = {};
         this.canvasWidth = 0;
@@ -134,9 +83,9 @@ class Vara {
             '63': {
                 paths: [
                     {
-                        w: 8.643798828125,
-                        h: 14.231731414794922,
-                        my: 22.666500004827977,
+                        w: 8.6437,
+                        h: 14.23173,
+                        my: 22.6665,
                         mx: 0,
                         dx: 0,
                         d:
@@ -144,9 +93,9 @@ class Vara {
                         pl: 1,
                     },
                     {
-                        w: 1.103759765625,
-                        h: 1.549820899963379,
-                        my: 8.881500004827977,
+                        w: 1.1037,
+                        h: 1.5498,
+                        my: 8.8815,
                         dx: 0,
                         mx: 1,
                         d:
@@ -154,7 +103,7 @@ class Vara {
                         pl: 1,
                     },
                 ],
-                w: 8.643798828125,
+                w: 8.6437,
             },
         };
 
@@ -171,7 +120,7 @@ class Vara {
         this.init();
     }
 
-    init() {
+    private init() {
         this.normalizeOptions();
 
         const xmlhttp = new XMLHttpRequest();
@@ -184,42 +133,27 @@ class Vara {
                     this.fontProperties = contents.p;
                     this.preRender();
                     this.render();
-                    //window.requestAnimationFrame()
                 }
             }
         };
         xmlhttp.send(null);
     }
 
+    onDraw(fn: (a?: Required<RenderData>) => void) {
+        this.onDrawF = fn;
+    }
+
     /**
      * Sets default option value for all existing option properties.
      * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
      */
-
-    normalizeOptions() {
+    private normalizeOptions() {
         this.options = this.options || {};
 
-        this.objectKeys(this.defaultOptions).forEach(optionKey => {
-            if (this.options[optionKey] === undefined) {
-                // @ts-ignore
-                this.options[optionKey] = this.defaultOptions[optionKey];
-            }
-        });
-
-        this.renderData.forEach((textItem, i) => {
-            if (typeof textItem === 'string') {
-                this.renderData[i] = {
-                    text: textItem,
-                    ...this.defaultOptions,
-                };
-            } else if (typeof textItem === 'object') {
-                this.objectKeys(this.options).forEach(option => {
-                    if (textItem[option] === undefined)
-                        // @ts-ignore
-                        textItem[option] = this.options[option];
-                });
-            }
-        });
+        this.options = {
+            ...this.defaultOptions,
+            ...this.options,
+        };
 
         Object.keys(this.defaultCharacters).forEach(character => {
             if (this.fontCharacters[character] === undefined) {
@@ -230,7 +164,10 @@ class Vara {
         });
     }
 
-    preRender() {
+    /**
+     * Performs some actions before rendering starts. These include finding the pathLength of each path and generating the render data.
+     */
+    private preRender() {
         let svg = this.createSVGNode('svg', {
             width: '100',
             height: '100',
@@ -245,6 +182,7 @@ class Vara {
             d: '',
         }) as SVGPathElement;
         svg.appendChild(svgPathData);
+
         this.objectKeys(this.fontCharacters).forEach(char => {
             this.fontCharacters[char].paths.forEach((path, i) => {
                 svgPathData.setAttributeNS(null, 'd', path.d);
@@ -257,277 +195,66 @@ class Vara {
             });
         });
 
-        this.renderData.forEach((item, index) => {
-            item.currentlyDrawing = 0;
-            item.startTime = false;
+        this.textItems.forEach(item => {
+            const renderItem = new RenderItem({
+                fontCharacters: this.fontCharacters,
+                options: this.options as Required<VaraTextOptions>,
+                textItem: item,
+                ctx: this.ctx,
+            });
 
-            item.index = index;
-            this.generateRenderData(item);
+            renderItem.generatePositions();
+
+            if (item.queued) {
+                this.renderData.queued.push(renderItem);
+            } else {
+                this.renderData.nonQueued.push(renderItem);
+            }
         });
-
-        console.log(this.renderData);
     }
 
-    render(rafTime = 0) {
+    private render(rafTime = 0) {
         let canvasHeight = this.calculateCanvasHeight();
         if (canvasHeight !== this.canvas.height) {
             this.canvas.height = canvasHeight;
         }
-        this.ctx.clearRect(0, 0, 800, canvasHeight);
+        this.ctx.clearRect(0, 0, this.canvas.width, canvasHeight);
 
-        const firstQueued = this.renderData.find(item => item.queued);
-        if (firstQueued) {
-            firstQueued.started = true;
-        }
-
-        this.renderData.forEach(item => {
-            if (!item.queued) {
-                item.started = true;
-            }
-            this.draw(item, rafTime);
+        this.renderData.nonQueued.forEach(item => {
+            item.render(rafTime);
         });
+
+        if (this.renderData.queued.length > 0) {
+            const queueHead = this.renderData.queued[0];
+            queueHead.render(rafTime);
+            if (queueHead.rendered()) {
+                this.dequeue();
+            }
+        }
 
         window.requestAnimationFrame(time => this.render(time));
     }
-
-    draw(_textItem: RenderData, rafTime: number) {
-        const textItem = <Required<RenderData>>_textItem;
-        this.ctx.strokeStyle = textItem.color;
-        this.ctx.lineWidth = textItem.strokeWidth;
-        this.ctx.fillStyle = 'transparent';
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-
-        let scale = textItem.fontSize / this.SCALEBASE;
-
-        const totalPathLength = textItem.render.reduce(
-            (a, c) => a + c.pathLength,
-            0
-        );
-
-        if (!textItem.startTime) {
-            textItem.startTime = rafTime;
-            textItem.lastRaf = rafTime;
-        }
-
-        textItem.render.forEach((item, itemIndex) => {
-
-            if(!textItem.started) {
-                return;
-            }
-
-            this.ctx.save();
-            this.ctx.scale(scale, scale);
-
-            this.ctx.lineDashOffset = 1;
-            this.ctx.setLineDash([item.dashOffset, item.pathLength + 1]);
-
-            if (textItem.finished) {
-                this.ctx.stroke(
-                    new Path2D(this.processPath(item.path, item.x, item.y))
-                );
-                this.ctx.restore();
-                return;
-            }
-
-            const delta = (rafTime - (textItem.startTime as number)) / 1000;
-            if (textItem.started && textItem.delay > 0) {
-                textItem.delay-= rafTime-textItem.lastRaf;
-                textItem.lastRaf = rafTime;
-                return;
-            }
-
-
-            const pathDuration =
-                ((item.pathLength / totalPathLength) * textItem.duration) /
-                1000;
-
-            const speed = item.pathLength / pathDuration;
-
-            if (textItem.currentlyDrawing === itemIndex) {
-                if (item.dashOffset >= item.pathLength) {
-                    textItem.currentlyDrawing += 1;
-                    if (textItem.currentlyDrawing >= textItem.render.length) {
-                        textItem.finished = true;
-                        this.startDrawingNext(textItem.index);
-                    }
-                }
-                item.dashOffset += speed * delta;
-            }
-
-            this.ctx.stroke(
-                new Path2D(this.processPath(item.path, item.x, item.y))
-            );
-            this.ctx.restore();
-        });
-
-        textItem.startTime = rafTime;
-    }
-
+    
     /**
-     * Calculates the position of each item on the canvas and returns the data required to render it.
-     * @param {RenderData} _textItem A single text block that needs to be rendered.
+     * Remove the first item from the queue. Used when a block has been drawn completely.
+     * The removed item is moved to the drawnLetters array
      */
-    generateRenderData(_textItem: RenderData) {
-        const textItem = <Required<RenderData>>_textItem;
-        let scale = textItem.fontSize / this.SCALEBASE;
-        textItem.height = 0;
-        // TODO: Create non breaking text
-        if (!textItem.breakWord) {
-            const textBlock =
-                typeof textItem.text === 'string'
-                    ? [textItem.text]
-                    : textItem.text;
-
-            const breakedTextBlock = textBlock.map(line => {
-                return line.split(' ');
-            });
-
-            const lines: {
-                text: string;
-                width: number;
-            }[] = [
-                {
-                    text: '',
-                    width: 0,
-                },
-            ];
-
-            breakedTextBlock.forEach(line => {
-                let spaceWidth = 0;
-                line.forEach(word => {
-                    let wordWidth = 0;
-
-                    word.split('').forEach(letter => {
-                        const charCode = letter.charCodeAt(0);
-
-                        const currentLetter =
-                            this.fontCharacters[charCode] ||
-                            this.fontCharacters['63'];
-                        let pathPositionCorrection = currentLetter.paths.reduce(
-                            (a, c) => a + c.mx - c.dx,
-                            0
-                        );
-                        wordWidth +=
-                            (currentLetter.w + pathPositionCorrection) * scale;
-                    });
-
-                    if (
-                        lines[lines.length - 1].width +
-                            wordWidth +
-                            5 * scale +
-                            spaceWidth +
-                            textItem.x * scale >
-                        textItem.width
-                    ) {
-                        lines.push({
-                            text: word + ' ',
-                            width: wordWidth,
-                        });
-                        spaceWidth = 0;
-                    } else {
-                        lines[lines.length - 1] = {
-                            text: lines[lines.length - 1].text + word,
-                            width: lines[lines.length - 1].width + wordWidth,
-                        };
-                        spaceWidth += this.WHITESPACE * scale;
-                        lines[lines.length - 1].text += ' ';
-                    }
-                });
-            });
-
-            let posX = textItem.x / scale,
-                posY =
-                    this.getTopPosition(textItem.index) / scale +
-                    textItem.y / scale,
-                top = textItem.lineHeight;
-
-            if (!textItem.render) {
-                textItem.render = [];
-            }
-            lines.forEach(line => {
-                let left = 0;
-                let x = posX,
-                    y = posY;
-                if (textItem.textAlign === 'center') {
-                    x = (textItem.width - line.width) / 2 / scale;
-                }
-                line.text.split('').forEach(letter => {
-                    if (letter === ' ') {
-                        left += this.WHITESPACE;
-                    } else {
-                        const currentLetter =
-                            this.fontCharacters[letter.charCodeAt(0)] ||
-                            this.fontCharacters['63'];
-
-                        currentLetter.paths.forEach(path => {
-                            textItem.render.push({
-                                path: path.d,
-                                x: x + left + path.mx - path.dx,
-                                y: y + top - path.my,
-                                pathLength: path.pl,
-                                dashOffset: 0,
-                            });
-                        });
-
-                        left += currentLetter.w;
-                    }
-                });
-                top += textItem.lineHeight;
-                textItem.height += textItem.lineHeight * scale;
-                // if (!textItem.absolutePosition) {
-                //     console.log(textItem.height, textItem.lineHeight);
-                // }
-            });
-        }
+    private dequeue() {
+        const removedItem = this.renderData.queued.shift();
+        if (removedItem) this.renderData.nonQueued.push(removedItem);
     }
 
+    // TODO: Make proper calculation function.
     calculateCanvasHeight() {
         let height = 0;
-        this.renderData.forEach(item => {
-            if (item.height && item.y) {
-                height += item.height + item.y;
-            }
-        });
-        return height + 50;
-    }
-
-    getTopPosition(i: number) {
-        if (i === 0) return 0;
-        else {
-            let topPosition = 0;
-            this.renderData.slice(0, i).forEach(item => {
-                if (!item.absolutePosition) {
-                    topPosition += (item.height ?? 0) + (item.y ?? 0);
+        [...this.renderData.nonQueued, ...this.renderData.queued].forEach(
+            item => {
+                if (item.height && item.textItem.y) {
+                    height += item.height + item.textItem.y;
                 }
-            });
-            return topPosition;
-        }
-    }
-
-    alterText(
-        id: number,
-        text: string,
-        letterAnimate: (text: string) => number[]
-    ) {
-        this.renderData[id].currentlyDrawing = 0;
-        this.renderData[id].render = [];
-        this.renderData[id].text = text;
-
-        let shouldAnimate = letterAnimate(text);
-        this.generateRenderData(this.renderData[id]);
-
-        this.renderData[id].render?.forEach((item, i) => {
-            if (!shouldAnimate.includes(i)) {
-                item.dashOffset = item.pathLength;
             }
-        });
-    }
-
-    startDrawingNext(current: number) {
-        if (current + 1 < this.renderData.length) {
-            this.renderData[current + 1].started = true;
-        }
+        );
+        return height + 50;
     }
 
     /**
@@ -573,18 +300,6 @@ class Vara {
         this.ctx.fillRect(x, y, w, h);
         this.ctx.fill();
         this.ctx.restore();
-    }
-}
-
-class Group {
-    items: any[];
-    x: number;
-    y: number;
-
-    constructor() {
-        this.items = [];
-        this.x = 0;
-        this.y = 0;
     }
 }
 
