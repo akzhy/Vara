@@ -31,7 +31,7 @@ export type VaraTextOptions = VaraGeneralOptions & {
 };
 
 export type VaraText = VaraTextOptions & {
-    text: string;
+    text: string | string[];
 };
 
 export type RenderData = RenderItem[];

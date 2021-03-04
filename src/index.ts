@@ -108,7 +108,7 @@ export default class Vara {
         };
 
         this.canvas = document.createElement('canvas');
-        this.canvas.width = 800;
+        this.canvas.width = this.element.getBoundingClientRect().width;
         this.canvas.height = 800;
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         this.element.appendChild(this.canvas);
@@ -234,7 +234,7 @@ export default class Vara {
 
         window.requestAnimationFrame(time => this.render(time));
     }
-    
+
     /**
      * Remove the first item from the queue. Used when a block has been drawn completely.
      * The removed item is moved to the drawnLetters array
@@ -255,6 +255,27 @@ export default class Vara {
             }
         );
         return height + 50;
+    }
+
+    addLetter({
+        letter,
+        id,
+        position,
+    }: {
+        letter: string;
+        id: string;
+        position: number;
+    }) {
+        const block = [
+            ...this.renderData.nonQueued,
+            ...this.renderData.queued,
+        ].find(item => item.textItem.id === id);
+
+        console.log(letter, position);
+        block?.addLetter({ letter, position });
+        // if(block) {
+        //     block.
+        // }
     }
 
     /**

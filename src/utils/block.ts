@@ -20,6 +20,7 @@ export default class Block extends RenderBase {
     ctx: CanvasRenderingContext2D;
     previousRAFTime: number;
     lines: Line[];
+    _lines: Line[];
     drawnLines: Line[];
     totalPathLength: number;
     options: Required<VaraText>;
@@ -34,6 +35,7 @@ export default class Block extends RenderBase {
         this.width = props.width;
 
         this.lines = [];
+        this._lines = [];
         this.drawnLines = [];
         this.ctx = props.ctx;
         this.previousRAFTime = 0;
@@ -57,8 +59,19 @@ export default class Block extends RenderBase {
         });
 
         this.lines.push(newLine);
+        this._lines.push(newLine);
 
         return newLine;
+    }
+
+    getAllLetters() {
+        const letters = this._lines.map(item => item._letters);
+        return letters.flat();
+    } 
+
+
+    getLetterById(id: number) {
+        return this.getAllLetters().find(item => item.character.id === id) ?? false;
     }
 
     /**
@@ -105,7 +118,7 @@ export default class Block extends RenderBase {
 
 
         this.drawnLines.forEach(line => {
-            line.paint();
+            line.render(rafTime, this.previousRAFTime);
         });
 
         if(this.lines.length > 0) {

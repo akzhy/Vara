@@ -1,5 +1,6 @@
 import { BlockName } from "../types";
 import Block from "./block";
+import VaraChar from "./char";
 import LetterPart, { LetterPartProps } from "./letterpart";
 import Line from "./line";
 import RenderBase from "./renderbase";
@@ -9,11 +10,13 @@ export interface LetterProps {
     width: number;
     ctx: CanvasRenderingContext2D;
     parent: Line;
+    character: VaraChar;
 }
 export default class Letter extends RenderBase {
     x: number;
     y: number;
     width: number;
+    character: VaraChar;
     parts: LetterPart[];
     drawnParts: LetterPart[];
     name: BlockName;
@@ -25,6 +28,7 @@ export default class Letter extends RenderBase {
      * @param part The part to be added
      */
     addPart(part: Omit<LetterPartProps, "ctx" | "parent">): void;
+    isDone(): boolean;
     /**
      * Remove the first item from the queue. Used when a part has been drawn completely.
      *

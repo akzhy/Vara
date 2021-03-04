@@ -26,7 +26,7 @@ export declare type VaraTextOptions = VaraGeneralOptions & {
     absolutePosition?: boolean;
 };
 export declare type VaraText = VaraTextOptions & {
-    text: string;
+    text: string | string[];
 };
 export declare type RenderData = RenderItem[];
 export declare type VaraFontItem = {

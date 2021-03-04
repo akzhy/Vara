@@ -25,15 +25,18 @@
 				x:0,
                 duration:5000,
                 textAlign: "center",
-                fontSize: 42
+                fontSize: 42,
+                id: "modify"
 			}],{
 				fontSize:42
             });
             
         const input = document.querySelector("#text");
-        input.addEventListener("change", function(text){
-            vara.alterText(0, input.value, function() {
-                return [input.value.length-1];
+        input.addEventListener("keyup", function(text){
+            vara.addLetter({
+                letter: input.value[input.value.length-1],
+                id: "modify",
+                position: ("Hello there"+input.value).length - 1
             })
         })
 	</script>

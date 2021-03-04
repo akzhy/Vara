@@ -16,6 +16,7 @@ export default class Block extends RenderBase {
     ctx: CanvasRenderingContext2D;
     previousRAFTime: number;
     lines: Line[];
+    _lines: Line[];
     drawnLines: Line[];
     totalPathLength: number;
     options: Required<VaraText>;
@@ -26,6 +27,8 @@ export default class Block extends RenderBase {
      * @param line The properties of the line to be added
      */
     addLine(line: Omit<LineProps, 'ctx' | 'parent'>): Line;
+    getAllLetters(): import("./letter").default[];
+    getLetterById(id: number): false | import("./letter").default;
     /**
      * Remove the first item from the queue. Used when a text line has been drawn completely.
      *

@@ -15,6 +15,7 @@ export default class Line extends RenderBase {
     y: number;
     ctx: CanvasRenderingContext2D;
     letters: Letter[];
+    _letters: Letter[];
     drawnLetters: Letter[];
     name: BlockName;
 
@@ -25,20 +26,60 @@ export default class Line extends RenderBase {
         this.y = props.y;
         this.ctx = props.ctx;
         this.letters = [];
+        this._letters = [];
         this.drawnLetters = [];
         this.name = "line";
     }
 
-    addLetter(letter: Omit<LetterProps, "ctx"|"parent">) {
-        console.log('adding letter', this.name);
+    addLetter(letter: Omit<LetterProps, "ctx"|"parent"> & { parent?: Line}) {
+        const newLetter = new Letter({
+            ...letter,
+            parent: letter.parent ?? this,
+            ctx: this.ctx
+        })
+
+        letter.character.getFontItem().paths.forEach(path => {
+            newLetter.addPart({
+                path: path.d,
+                x: path.mx - path.dx,
+                y: -path.my,
+                pathLength: path.pl,
+                dashOffset: 0,
+                width: path.w,
+            });
+        })
+        this.letters.push(newLetter);
+        this._letters.push(newLetter);
+
+        return newLetter;
+    }
+
+    setLetters(letters: Letter[]) {
+        this._letters = letters;
+        this.letters = letters.filter(letter => !letter.isDone());
+        this.drawnLetters = letters.filter(letter => letter.isDone());
+    }
+
+    generateLetter(letter: Omit<LetterProps, "ctx"|"parent">) {
         const newLetter = new Letter({
             ...letter,
             parent: this,
             ctx: this.ctx
         })
-        this.letters.push(newLetter);
-
         return newLetter;
+    }
+
+    setPosition(x:number, y:number) {
+        this.x = x;
+        this.y = y;
+    }
+
+    isDone(){
+        return this.letters.length === 0;
+    }
+
+    getAllLetters(){
+        return this._letters;
     }
 
     /**
@@ -71,15 +112,6 @@ export default class Line extends RenderBase {
             letter.paint();
         })
 
-        this.ctx.restore();
-    }
-
-    paint() {
-        this.ctx.save();
-        this.ctx.translate(this.x, this.y);
-        this.drawnLetters.forEach(letter => {
-            letter.paint();
-        })
         this.ctx.restore();
     }
 }

@@ -13,10 +13,18 @@ export default class Line extends RenderBase {
     y: number;
     ctx: CanvasRenderingContext2D;
     letters: Letter[];
+    _letters: Letter[];
     drawnLetters: Letter[];
     name: BlockName;
     constructor(props: LineProps);
-    addLetter(letter: Omit<LetterProps, "ctx" | "parent">): Letter;
+    addLetter(letter: Omit<LetterProps, "ctx" | "parent"> & {
+        parent?: Line;
+    }): Letter;
+    setLetters(letters: Letter[]): void;
+    generateLetter(letter: Omit<LetterProps, "ctx" | "parent">): Letter;
+    setPosition(x: number, y: number): void;
+    isDone(): boolean;
+    getAllLetters(): Letter[];
     /**
      * Remove the first item from the queue. Used when a letter has been drawn completely.
      * The removed item is moved to the drawnLetters array
@@ -27,5 +35,4 @@ export default class Line extends RenderBase {
      * @param rafTime The time value received from requestAnimationFrame
      */
     render(rafTime: number, prevRAFTime: number): void;
-    paint(): void;
 }

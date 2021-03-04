@@ -51,6 +51,11 @@ export default class Vara {
      */
     private dequeue;
     calculateCanvasHeight(): number;
+    addLetter({ letter, id, position, }: {
+        letter: string;
+        id: string;
+        position: number;
+    }): void;
     /**
      * Creates and returns an SVG element
      * @param n The name of the SVG node to be created

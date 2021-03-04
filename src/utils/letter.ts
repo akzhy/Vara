@@ -1,5 +1,6 @@
 import { BlockName } from "../types";
 import Block from "./block";
+import VaraChar from "./char";
 import LetterPart, { LetterPartProps } from "./letterpart";
 import Line from "./line";
 import RenderBase from "./renderbase";
@@ -10,12 +11,14 @@ export interface LetterProps {
     width: number;
     ctx: CanvasRenderingContext2D;
     parent: Line;
+    character: VaraChar;
 }
 
 export default class Letter extends RenderBase {
     x: number;
     y: number;
     width: number;
+    character: VaraChar;
 
     parts: LetterPart[];
 
@@ -33,6 +36,8 @@ export default class Letter extends RenderBase {
         this.parts = [];
         this.drawnParts = [];
         this.name = "letter"
+
+        this.character = props.character;
 
         this.rootBlock = this.getParent("block", this) as Block;
     }
@@ -58,6 +63,10 @@ export default class Letter extends RenderBase {
         if(this.rootBlock){
             this.rootBlock.modifyPathLength(part.pathLength, "increment");
         }
+    }
+
+    isDone() {
+        return this.parts.length === 0;
     }
 
     /**
