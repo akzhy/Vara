@@ -20,7 +20,7 @@ Or download and include the library as follows
 ```html
 <script src="./src/vara.min.js" type="text/javascript"></script>
 <!-- Or jsdelivr -->
-<script src="https://cdn.jsdelivr.net/gh/akzhy/vara@master/src/vara.min.js" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/vara@1.2.0/src/vara.min.js" type="text/javascript"></script>
 ```
 ```javascript
 new Vara("#element","font.json",[{
