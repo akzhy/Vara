@@ -20,7 +20,7 @@ export default class RenderItem {
         [x: string]: VaraFontItem;
     };
     ctx: CanvasRenderingContext2D;
-    block: Block | null;
+    block: Block;
     height: number;
     text: VaraChar[][];
 
@@ -32,7 +32,14 @@ export default class RenderItem {
         this.height = 0;
         this.fontCharacters = props.fontCharacters;
         this.ctx = props.ctx;
-        this.block = null;
+
+        this.block = new Block({
+            width: this.textItem.width,
+            x: this.textItem.x,
+            y: this.textItem.y,
+            ctx: this.ctx,
+            options: this.textItem,
+        });
 
         if (typeof this.textItem.text === 'string') {
             this.text = [
@@ -90,53 +97,64 @@ export default class RenderItem {
         //     }
         // }
 
+        const newChar = new VaraChar({
+            char: letter,
+            fontItem:
+                this.fontCharacters[letter.charCodeAt(0)] ||
+                this.fontCharacters['63'],
+            isSpace: letter === ' ',
+        });
+
         if (typeof position === 'number') {
             let textCharCount = 0;
             this.text.forEach((textLine, index) => {
-                console.log(textLine, position);
                 if (position <= textCharCount + textLine.length) {
-                    console.log("Here");
-                    console.log("Before", JSON.parse(JSON.stringify(this.text[index])));
                     this.text[index] = [
                         ...textLine.slice(0, position - textCharCount),
-                        new VaraChar({
-                            char: letter,
-                            fontItem:
-                                this.fontCharacters[letter.charCodeAt(0)] ||
-                                this.fontCharacters['63'],
-                            isSpace: letter === ' ',
-                        }),
+                        newChar,
                         ...textLine.slice(position - textCharCount),
                     ];
-                    console.log("After", JSON.parse(JSON.stringify(this.text[index])));
                 } else {
                     textCharCount += textLine.length;
                 }
             });
         }
 
-        this.regeneratePositions();
-    }
-
-    regeneratePositions() {
-        console.log(this.block);
-        let scale = this.textItem.fontSize / SCALEBASE;
-        this.height = 0;
-
         const lines = this.generateLineData(this.text);
 
-        let top = this.textItem.lineHeight;
-
-        const block = this.block as Block;
-
-        if (lines.length > block._lines.length) {
-            while (lines.length > block._lines.length) {
-                block.addLine({
+        if (lines.length > this.block.getLineCount()) {
+            while (lines.length > this.block.getLineCount()) {
+                this.block.addLine({
                     x: 0,
                     y: 0,
                 });
             }
         }
+
+        this.block.getLastLine().addLetter({
+            character: newChar,
+            width: newChar.fontItem.w,
+            x: 0,
+            y: 0,
+        });
+
+        this.regeneratePositions(lines);
+    }
+
+    regeneratePositions(
+        lines: {
+            text: VaraChar[];
+            width: number;
+        }[]
+    ) {
+        let scale = this.textItem.fontSize / SCALEBASE;
+        this.height = 0;
+
+        let top = this.textItem.lineHeight;
+
+        const block = this.block;
+
+        const lettersToSetInLine: Letter[][] = [];
 
         lines.forEach((line, lineIndex) => {
             let left = 0;
@@ -146,40 +164,37 @@ export default class RenderItem {
                 x = (this.textItem.width - line.width) / 2;
             }
 
-            let lineClass = block.lines[lineIndex];
+            let lineClass = block.getLineAtIndex(lineIndex);
             lineClass.setPosition(x, y);
+
             const lettersToSet: Letter[] = [];
 
-            line.text.forEach(letter => {
-                if (letter.isSpace) {
+            line.text.forEach(char => {
+                if (char.isSpace) {
                     left += WHITESPACE;
                 } else {
-                    let foundLetter = block.getLetterById(letter.id);
+                    let foundLetter = block.getLetterById(char.id);
                     if (foundLetter) {
-                        foundLetter.parent = lineClass;
+                        foundLetter.setParent(lineClass);
                         foundLetter.setPosition(left, top);
                         lettersToSet.push(foundLetter);
+
                         left += foundLetter.character.getFontItem().w;
                     } else {
-                        lettersToSet.push(
-                            lineClass.addLetter({
-                                character: letter,
-                                width: letter.getFontItem().w,
-                                x: left,
-                                y: top,
-                            })
-                        );
-                        left += letter.getFontItem().w;
+                        // TODO: Show meaningful error
+                        console.error(`Error - Letter with id ${char.id} not found`);
                     }
                 }
             });
             top += this.textItem.lineHeight;
             this.height += this.textItem.lineHeight * scale;
 
-            lineClass.setLetters(lettersToSet);
-
-            console.log(lettersToSet);
+            lettersToSetInLine.push(lettersToSet);
         });
+
+        block.getLines().forEach((line, lineIndex) => {
+            line.setLetters(lettersToSetInLine[lineIndex]);
+        })
     }
 
     generatePositions() {
@@ -187,16 +202,11 @@ export default class RenderItem {
         this.height = 0;
 
         const lines = this.generateLineData(this.text);
+        console.log(lines);
 
         let top = this.textItem.lineHeight;
 
-        const block = new Block({
-            width: this.textItem.width,
-            x: this.textItem.x,
-            y: this.textItem.y,
-            ctx: this.ctx,
-            options: this.textItem,
-        });
+        const block = this.block;
 
         lines.forEach(line => {
             let left = 0;
@@ -231,7 +241,7 @@ export default class RenderItem {
             this.height += this.textItem.lineHeight * scale;
         });
 
-        this.block = block;
+        console.log(block);
     }
 
     generateLineData(lines: VaraChar[][]) {
@@ -278,13 +288,19 @@ export default class RenderItem {
                 });
 
                 if (
-                    (returnData[lines.length - 1]?.width ?? 0) +
+                    (returnData[returnData.length - 1]?.width ?? 0) +
                         wordWidth +
-                        5 * scale +
                         spaceWidth +
-                        this.textItem.x * scale >
+                        this.textItem.x >
                     this.textItem.width
                 ) {
+                    console.log({
+                        prevWidth: returnData[returnData.length - 1]?.width ?? 0,
+                        wordWidth,
+                        spaceWidth,
+                        x: this.textItem.x,
+                        width: this.textItem.width
+                    });
                     returnData.push({
                         text: [
                             ...word,

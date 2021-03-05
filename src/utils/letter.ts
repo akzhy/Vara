@@ -65,6 +65,10 @@ export default class Letter extends RenderBase {
         }
     }
 
+    setParent(parent:Line) {
+        this.parent = parent;
+    }
+
     isDone() {
         return this.parts.length === 0;
     }

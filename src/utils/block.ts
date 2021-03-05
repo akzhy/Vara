@@ -20,7 +20,7 @@ export default class Block extends RenderBase {
     ctx: CanvasRenderingContext2D;
     previousRAFTime: number;
     lines: Line[];
-    _lines: Line[];
+    private _lines: Line[];
     drawnLines: Line[];
     totalPathLength: number;
     options: Required<VaraText>;
@@ -65,9 +65,25 @@ export default class Block extends RenderBase {
     }
 
     getAllLetters() {
-        const letters = this._lines.map(item => item._letters);
+        const letters = this._lines.map(item => item.getAllLetters());
         return letters.flat();
-    } 
+    }
+
+    getLines(){
+        return this._lines;
+    }
+
+    getLineCount() {
+        return this._lines.length;
+    }
+
+    getLineAtIndex(index: number) {
+        return this._lines[index];
+    }
+
+    getLastLine() {
+        return this._lines[this._lines.length-1];
+    }
 
 
     getLetterById(id: number) {
@@ -75,13 +91,13 @@ export default class Block extends RenderBase {
     }
 
     /**
-     * Remove the first item from the queue. Used when a text line has been drawn completely.
+     * Remove the first line from the queue of lines. Used when a text line has been drawn completely.
      * 
      * The removed item is moved to the drawnParts array
      */
     dequeue() {
         const removedItem = this.lines.shift();
-        if (removedItem) this.lines.push(removedItem);
+        if (removedItem) this.drawnLines.push(removedItem);
     }
 
     /**
@@ -123,13 +139,14 @@ export default class Block extends RenderBase {
 
         if(this.lines.length > 0) {
             const line = this.lines[0];
-            line.render(rafTime, this.previousRAFTime);
-            if(line.letters.length === 0) {
+            if(line.isDone()) {
                 this.dequeue();
             }
+            line.render(rafTime, this.previousRAFTime);
+            
         }
-        this.ctx.restore();
 
+        this.ctx.restore();
         this.previousRAFTime = rafTime;
     }
 }
