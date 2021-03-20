@@ -4,7 +4,7 @@ interface RenderItemProps {
     parent?: Blocks;
 }
 export default class RenderBase {
-    ctx: CanvasRenderingContext2D;
+    protected ctx: CanvasRenderingContext2D;
     parent?: Blocks | null;
     name: BlockName;
     constructor(props: RenderItemProps);

@@ -15,15 +15,25 @@ export default class RenderItem {
         [x: string]: VaraFontItem;
     };
     ctx: CanvasRenderingContext2D;
-    block: Block | null;
+    block: Block;
     height: number;
     text: VaraChar[][];
     constructor(props: RenderItemProps);
+    getCursorPosition(position: number): false | {
+        x: number;
+        y: number;
+    };
     addLetter({ letter, position, }: {
         letter: string;
         position: number | number[];
     }): void;
-    regeneratePositions(): void;
+    removeLetter({ position }: {
+        position: number | number[];
+    }): void;
+    regeneratePositions(lines: {
+        text: VaraChar[];
+        width: number;
+    }[]): void;
     generatePositions(): void;
     generateLineData(lines: VaraChar[][]): {
         text: VaraChar[];

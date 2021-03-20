@@ -1,9 +1,9 @@
-import { BlockName } from "../types";
-import Block from "./block";
-import VaraChar from "./char";
-import LetterPart, { LetterPartProps } from "./letterpart";
-import Line from "./line";
-import RenderBase from "./renderbase";
+import { BlockName } from '../types';
+import Block from './block';
+import VaraChar from './char';
+import LetterPart, { LetterPartProps } from './letterpart';
+import Line from './line';
+import RenderBase from './renderbase';
 
 export interface LetterProps {
     x: number;
@@ -14,11 +14,14 @@ export interface LetterProps {
     character: VaraChar;
 }
 
+let letterId = 0;
+
 export default class Letter extends RenderBase {
     x: number;
     y: number;
     width: number;
     character: VaraChar;
+    id: number;
 
     parts: LetterPart[];
 
@@ -35,11 +38,14 @@ export default class Letter extends RenderBase {
         this.width = props.width;
         this.parts = [];
         this.drawnParts = [];
-        this.name = "letter"
+        this.name = 'letter';
 
         this.character = props.character;
 
-        this.rootBlock = this.getParent("block", this) as Block;
+        this.id = letterId;
+        letterId++;
+
+        this.rootBlock = this.getParent('block', this) as Block;
     }
 
     setPosition(x: number, y: number) {
@@ -51,21 +57,22 @@ export default class Letter extends RenderBase {
      * Add a new part to the queue
      * @param part The part to be added
      */
-    addPart(part: Omit<LetterPartProps,"ctx"|"parent">) {
-        this.parts.push(new LetterPart({
-            ...part,
-            ctx: this.ctx,
-            parent: this,
-        }));
-    
-        
+    addPart(part: Omit<LetterPartProps, 'ctx' | 'parent'>) {
+        this.parts.push(
+            new LetterPart({
+                ...part,
+                ctx: this.ctx,
+                parent: this,
+            })
+        );
+
         // Update the total path length stored in the main block.
-        if(this.rootBlock){
-            this.rootBlock.modifyPathLength(part.pathLength, "increment");
+        if (this.rootBlock) {
+            this.rootBlock.modifyPathLength(part.pathLength, 'increment');
         }
     }
 
-    setParent(parent:Line) {
+    setParent(parent: Line) {
         this.parent = parent;
     }
 
@@ -75,7 +82,7 @@ export default class Letter extends RenderBase {
 
     /**
      * Remove the first item from the queue. Used when a part has been drawn completely.
-     * 
+     *
      * The removed item is moved to the drawnParts array
      */
     dequeue() {
@@ -88,7 +95,6 @@ export default class Letter extends RenderBase {
      * @param rafTime The time value received from requestAnimationFrame
      */
     render(rafTime: number, previousRAFTime: number) {
-
         this.ctx.save();
         this.ctx.scale(this.rootBlock.scale, this.rootBlock.scale);
         this.ctx.translate(this.x, this.y);
@@ -106,23 +112,22 @@ export default class Letter extends RenderBase {
 
         this.drawnParts.forEach(drawnPart => {
             drawnPart.paint();
-        })
+        });
 
         this.ctx.restore();
     }
-
 
     /**
      * Paints the paths whose animations are complete
      */
     paint() {
         this.ctx.save();
-        this.ctx.scale(this.rootBlock.scale,this.rootBlock.scale);
+        this.ctx.scale(this.rootBlock.scale, this.rootBlock.scale);
         this.ctx.translate(this.x, this.y);
 
         this.drawnParts.forEach(drawnPart => {
             drawnPart.paint();
-        })
+        });
 
         this.ctx.restore();
     }

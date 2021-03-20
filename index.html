@@ -1,44 +1,96 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>Vara.js</title>
-	<style>
-	*{
-		margin:0;
-		padding:0;
-	}
-	#container{
-		width:60%;
-		margin:20px auto;
-	}
-	</style>
-</head>
-<body>
-    <input type="text" id="text" />
-    <div id="container"></div>
-	<script src="./dist/vara.umd.development.js" type="text/javascript"></script>
-	<script>
-		var vara = new Vara("#container","./fonts/Satisfy/SatisfySL.json",[{
-				text:"Hello there",
-				strokeWidth:1.5,
-				y:40,
-				x:0,
-                duration:5000,
-                textAlign: "center",
-                fontSize: 42,
-                id: "modify"
-			}],{
-				fontSize:42
+    <head>
+        <title>Vara.js</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            #container {
+                width: 60%;
+                margin: 20px auto;
+            }
+        </style>
+    </head>
+    <body>
+        <input type="text" id="text" />
+        <div id="container"></div>
+        <script
+            src="./dist/vara.umd.development.js"
+            type="text/javascript"
+        ></script>
+        <script>
+            let cursorData = {
+                color: '#000',
+                prevTime: 0,
+                x: 0,
+                y: 0,
+            };
+
+            var vara = new Vara(
+                '#container',
+                './fonts/Satisfy/SatisfySL.json',
+                [
+                    {
+                        text: '',
+                        strokeWidth: 1.5,
+                        y: 40,
+                        x: 0,
+                        duration: 2000,
+                        textAlign: 'center',
+                        fontSize: 42,
+                        id: 'modify',
+                    },
+                ],
+                {
+                    fontSize: 42,
+                }
+            );
+
+            const renderFunction = (ctx, rafTime) => {
+                ctx.beginPath();
+                ctx.fillStyle = cursorData.color;
+                ctx.rect(cursorData.x + 10, cursorData.y, 4, 40);
+                ctx.fill();
+
+                if(rafTime > cursorData.prevTime+500) {
+                    if(cursorData.color === "#000") {
+                        cursorData.color = "transparent";
+                    } else {
+                        cursorData.color = "#000";
+                    }
+                    cursorData.prevTime = rafTime;
+                }
+            };
+
+            vara.ready(function() {
+                vara.setRenderFunction('modify', renderFunction);
             });
-            
-        const input = document.querySelector("#text");
-        input.addEventListener("keyup", function(text){
-            vara.addLetter({
-                letter: input.value[input.value.length-1],
-                id: "modify",
-                position: ("Hello there"+input.value).length - 1
-            })
-        })
-	</script>
-</body>
+
+            const input = document.querySelector('#text');
+            input.addEventListener('keyup', function(e) {
+                if (e.which === 8) {
+                    console.log(input.value);
+                    vara.removeLetter({
+                        position: input.value.length,
+                        id: 'modify',
+                    });
+                } else {
+                    vara.addLetter({
+                        letter: input.value[input.value.length - 1],
+                        id: 'modify',
+                        position: input.value.length - 1,
+                    });
+                    cursorData = {
+                        ...cursorData,
+                        ...vara.getCursorPosition({
+                            id: 'modify',
+                            position: input.value.length - 1,
+                        }),
+                    };
+                }
+            });
+        </script>
+    </body>
 </html>

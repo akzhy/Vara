@@ -1,4 +1,4 @@
-import { VaraFontItem } from "../types";
+import { VaraFontItem } from '../types';
 interface VaraCharProps {
     char: string;
     fontItem: VaraFontItem;

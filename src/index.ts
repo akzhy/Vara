@@ -1,12 +1,11 @@
 import {
     VaraGeneralOptions,
     VaraText,
-    RenderData,
     VaraFontItem,
     ObjectKeys,
     VaraTextOptions,
 } from './types';
-import RenderItem from './utils/renderitem';
+import Block from './utils/block';
 
 export default class Vara {
     elementName: string;
@@ -14,10 +13,7 @@ export default class Vara {
     fontSource: string;
     options: VaraGeneralOptions;
     textItems: VaraText[];
-    renderData: {
-        queued: RenderData;
-        nonQueued: RenderData;
-    };
+    blocks: Block[];
     rendered: boolean;
     defaultOptions: Required<VaraGeneralOptions>;
     defaultCharacters: {
@@ -39,7 +35,9 @@ export default class Vara {
         space: number;
         tf: number;
     };
-    onDrawF?: (fn?: Required<RenderData>) => void;
+    onDrawF?: () => void;
+    private readyfn?: () => void;
+
     WHITESPACE: number;
     SCALEBASE: number;
 
@@ -54,10 +52,7 @@ export default class Vara {
         this.fontSource = fontSource;
         this.options = options;
         this.textItems = text;
-        this.renderData = {
-            nonQueued: [],
-            queued: [],
-        };
+        this.blocks = [];
         this.rendered = false;
         this.fontCharacters = {};
         this.canvasWidth = 0;
@@ -126,12 +121,13 @@ export default class Vara {
         const xmlhttp = new XMLHttpRequest();
         xmlhttp.open('GET', this.fontSource, true);
         xmlhttp.onreadystatechange = () => {
-            if (xmlhttp.readyState == 4) {
-                if (xmlhttp.status == 200) {
+            if (xmlhttp.readyState === 4) {
+                if (xmlhttp.status === 200) {
                     const contents = JSON.parse(xmlhttp.responseText);
                     this.fontCharacters = contents.c;
                     this.fontProperties = contents.p;
                     this.preRender();
+                    if (this.readyfn) this.readyfn();
                     this.render();
                 }
             }
@@ -139,7 +135,11 @@ export default class Vara {
         xmlhttp.send(null);
     }
 
-    onDraw(fn: (a?: Required<RenderData>) => void) {
+    ready(fn: () => void) {
+        this.readyfn = fn;
+    }
+
+    onDraw(fn: () => void) {
         this.onDrawF = fn;
     }
 
@@ -196,20 +196,16 @@ export default class Vara {
         });
 
         this.textItems.forEach(item => {
-            const renderItem = new RenderItem({
-                fontCharacters: this.fontCharacters,
-                options: this.options as Required<VaraTextOptions>,
-                textItem: item,
+            const block = new Block({
+                root: this,
+                options: {
+                    ...(this.options as Required<VaraTextOptions>),
+                    ...item,
+                },
                 ctx: this.ctx,
             });
 
-            renderItem.generatePositions();
-
-            if (item.queued) {
-                this.renderData.queued.push(renderItem);
-            } else {
-                this.renderData.nonQueued.push(renderItem);
-            }
+            this.blocks.push(block);
         });
     }
 
@@ -220,40 +216,21 @@ export default class Vara {
         }
         this.ctx.clearRect(0, 0, this.canvas.width, canvasHeight);
 
-        this.renderData.nonQueued.forEach(item => {
+        this.blocks.forEach(item => {
             item.render(rafTime);
         });
 
-        if (this.renderData.queued.length > 0) {
-            const queueHead = this.renderData.queued[0];
-            queueHead.render(rafTime);
-            if (queueHead.rendered()) {
-                this.dequeue();
-            }
-        }
-
         window.requestAnimationFrame(time => this.render(time));
-    }
-
-    /**
-     * Remove the first item from the queue. Used when a block has been drawn completely.
-     * The removed item is moved to the drawnLetters array
-     */
-    private dequeue() {
-        const removedItem = this.renderData.queued.shift();
-        if (removedItem) this.renderData.nonQueued.push(removedItem);
     }
 
     // TODO: Make proper calculation function.
     calculateCanvasHeight() {
         let height = 0;
-        [...this.renderData.nonQueued, ...this.renderData.queued].forEach(
-            item => {
-                if (item.height && item.textItem.y) {
-                    height += item.height + item.textItem.y;
-                }
+        this.blocks.forEach(item => {
+            if (item.height && item.options.y) {
+                height += item.height + item.options.y;
             }
-        );
+        });
         return height + 50;
     }
 
@@ -266,16 +243,31 @@ export default class Vara {
         id: string;
         position: number;
     }) {
-        const block = [
-            ...this.renderData.nonQueued,
-            ...this.renderData.queued,
-        ].find(item => item.textItem.id === id);
-
-        console.log(letter, position);
+        const block = this.blocks.find(item => item.options.id === id);
         block?.addLetter({ letter, position });
         // if(block) {
         //     block.
         // }
+    }
+
+    removeLetter({ id, position }: { id: string; position: number }) {
+        const block = this.blocks.find(item => item.options.id === id);
+
+        block?.removeLetter({ position });
+        // if(block) {
+        //     block.
+        // }
+    }
+
+    getCursorPosition({ position, id }: { position: number; id: string }) {
+        const block = this.blocks.find(item => item.options.id === id);
+
+        return block?.getCursorPosition(position);
+    }
+
+    setRenderFunction(id: string, fn: (ctx: CanvasRenderingContext2D) => void) {
+        const block = this.blocks.find(item => item.options.id === id);
+        return block?.setRenderFunction(fn);
     }
 
     /**
@@ -325,5 +317,5 @@ export default class Vara {
 }
 
 if (window) {
-    (<any>window).Vara = Vara;
+    (window as any).Vara = Vara;
 }

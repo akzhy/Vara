@@ -1,4 +1,4 @@
-import { VaraFontItem } from "../types";
+import { VaraFontItem } from '../types';
 
 interface VaraCharProps {
     char: string;
@@ -6,7 +6,7 @@ interface VaraCharProps {
     isSpace?: boolean;
 }
 
-let ___varaCharId___ = 0;
+let varaCharId = 0;
 
 export default class VaraChar {
     char: string;
@@ -14,13 +14,13 @@ export default class VaraChar {
     fontItem: VaraFontItem;
     isSpace: boolean;
 
-    constructor(props:VaraCharProps) {
+    constructor(props: VaraCharProps) {
         this.char = props.char;
         this.fontItem = props.fontItem;
         this.isSpace = props.isSpace ?? false;
 
-        this.id = ___varaCharId___;
-        ___varaCharId___++;
+        this.id = varaCharId;
+        varaCharId++;
     }
 
     getFontItem() {

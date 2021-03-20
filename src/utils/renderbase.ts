@@ -6,7 +6,7 @@ interface RenderItemProps {
 }
 
 export default class RenderBase {
-    ctx: CanvasRenderingContext2D;
+    protected ctx: CanvasRenderingContext2D;
     parent?: Blocks | null;
     name: BlockName;
 
@@ -16,7 +16,10 @@ export default class RenderBase {
         this.name = 'block';
     }
 
-    getParent<T extends BlockName>(parentName: T, current: Blocks): BlockMapped[T] | false {
+    getParent<T extends BlockName>(
+        parentName: T,
+        current: Blocks
+    ): BlockMapped[T] | false {
         const parentIndex = BLOCK_COMPOSITION.indexOf(parentName);
         const currentItemIndex = BLOCK_COMPOSITION.indexOf(this.name);
         if (parentIndex < currentItemIndex) {

@@ -2,7 +2,6 @@ import Block from "./utils/block";
 import Letter from "./utils/letter";
 import LetterPart from "./utils/letterpart";
 import Line from "./utils/line";
-import RenderItem from "./utils/renderitem";
 
 export type VaraGeneralOptions = {
     fontSize?: number;
@@ -33,8 +32,6 @@ export type VaraTextOptions = VaraGeneralOptions & {
 export type VaraText = VaraTextOptions & {
     text: string | string[];
 };
-
-export type RenderData = RenderItem[];
 
 export type VaraFontItem = {
     paths: Array<{

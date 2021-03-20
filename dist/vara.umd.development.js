@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = global || self, factory(global.vara = {}));
+  (global = global || self, factory(global.Vara = {}));
 }(this, (function (exports) { 'use strict';
 
   function _extends() {
@@ -25,7 +25,17 @@
   function _inheritsLoose(subClass, superClass) {
     subClass.prototype = Object.create(superClass.prototype);
     subClass.prototype.constructor = subClass;
-    subClass.__proto__ = superClass;
+
+    _setPrototypeOf(subClass, superClass);
+  }
+
+  function _setPrototypeOf(o, p) {
+    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+
+    return _setPrototypeOf(o, p);
   }
 
   function _assertThisInitialized(self) {
@@ -35,6 +45,32 @@
 
     return self;
   }
+
+  var varaCharId = 0;
+
+  var VaraChar = /*#__PURE__*/function () {
+    function VaraChar(props) {
+      var _props$isSpace;
+
+      this["char"] = props["char"];
+      this.fontItem = props.fontItem;
+      this.isSpace = (_props$isSpace = props.isSpace) != null ? _props$isSpace : false;
+      this.id = varaCharId;
+      varaCharId++;
+    }
+
+    var _proto = VaraChar.prototype;
+
+    _proto.getFontItem = function getFontItem() {
+      return this.fontItem;
+    };
+
+    _proto.getId = function getId() {
+      return this.id;
+    };
+
+    return VaraChar;
+  }();
 
   var SCALEBASE = 16;
   var WHITESPACE = 10;
@@ -46,7 +82,7 @@
       var _props$parent;
 
       this.ctx = props.ctx;
-      this.parent = (_props$parent = props.parent) !== null && _props$parent !== void 0 ? _props$parent : null;
+      this.parent = (_props$parent = props.parent) != null ? _props$parent : null;
       this.name = 'block';
     }
 
@@ -60,7 +96,7 @@
         if (current.name === parentName) {
           return current;
         } else {
-          if (current.parent) return this.getParent(parentName, current === null || current === void 0 ? void 0 : current.parent);else return false;
+          if (current.parent) return this.getParent(parentName, current == null ? void 0 : current.parent);else return false;
         }
       } else {
         return false;
@@ -134,6 +170,8 @@
     return LetterPart;
   }(RenderBase);
 
+  var letterId = 0;
+
   var Letter = /*#__PURE__*/function (_RenderBase) {
     _inheritsLoose(Letter, _RenderBase);
 
@@ -146,9 +184,11 @@
       _this.width = props.width;
       _this.parts = [];
       _this.drawnParts = [];
-      _this.name = "letter";
+      _this.name = 'letter';
       _this.character = props.character;
-      _this.rootBlock = _this.getParent("block", _assertThisInitialized(_this));
+      _this.id = letterId;
+      letterId++;
+      _this.rootBlock = _this.getParent('block', _assertThisInitialized(_this));
       return _this;
     }
 
@@ -171,8 +211,12 @@
       }))); // Update the total path length stored in the main block.
 
       if (this.rootBlock) {
-        this.rootBlock.modifyPathLength(part.pathLength, "increment");
+        this.rootBlock.modifyPathLength(part.pathLength, 'increment');
       }
+    };
+
+    _proto.setParent = function setParent(parent) {
+      this.parent = parent;
     };
 
     _proto.isDone = function isDone() {
@@ -234,6 +278,12 @@
     return Letter;
   }(RenderBase);
 
+  var lineId = 0;
+  /**
+   * Used to represent a line of text drawn in the canvas.
+   *
+   */
+
   var Line = /*#__PURE__*/function (_RenderBase) {
     _inheritsLoose(Line, _RenderBase);
 
@@ -243,23 +293,40 @@
       _this = _RenderBase.call(this, props) || this;
       _this.x = props.x;
       _this.y = props.y;
-      _this.ctx = props.ctx;
-      _this.letters = [];
-      _this._letters = [];
-      _this.drawnLetters = [];
-      _this.name = "line";
+      _this.ctx = props.ctx; // This will act as queue of letters
+      // Each item is animated one after the other
+
+      _this.letters = []; // This will contain all the letters that have already been drawn (animated).
+
+      _this.drawnLetters = []; // Contains both drawn and queued letters in the order they were created
+
+      _this._letters = []; // The name of this class.
+      // Name is used for finding a specific parent using the getParent method
+
+      _this.name = 'line';
+      _this.id = lineId;
+      lineId++;
       return _this;
     }
+    /**
+     * Add a new letter to this line
+     * @param letter - The letter to be added
+     */
+
 
     var _proto = Line.prototype;
 
     _proto.addLetter = function addLetter(letter) {
       var _letter$parent;
 
+      // Create the letter
       var newLetter = new Letter(_extends({}, letter, {
-        parent: (_letter$parent = letter.parent) !== null && _letter$parent !== void 0 ? _letter$parent : this,
+        parent: (_letter$parent = letter.parent) != null ? _letter$parent : this,
         ctx: this.ctx
-      }));
+      })); // Create all the parts of the letter
+      // A letter can have multiple parts.
+      // The letter i has two parts, the tittle (dot) and the line part?
+
       letter.character.getFontItem().paths.forEach(function (path) {
         newLetter.addPart({
           path: path.d,
@@ -269,13 +336,35 @@
           dashOffset: 0,
           width: path.w
         });
-      });
+      }); // The letter is pushed to both letters and _letters array
+
       this.letters.push(newLetter);
 
-      this._letters.push(newLetter);
+      this._letters.push(newLetter); // Return the newly created letter
+
 
       return newLetter;
     };
+
+    _proto.removeLetter = function removeLetter(letterId) {
+      this._letters = this._letters.filter(function (letter) {
+        return letter.id !== letterId;
+      });
+      this.letters = this.letters.filter(function (letter) {
+        return letter.id !== letterId;
+      });
+      this.drawnLetters = this.drawnLetters.filter(function (letter) {
+        return letter.id !== letterId;
+      });
+    }
+    /**
+     * Override the letters of this line.
+     *
+     * Letter states are preserved.
+     *
+     * @param letters The new letters of the line
+     */
+    ;
 
     _proto.setLetters = function setLetters(letters) {
       this._letters = letters;
@@ -285,31 +374,37 @@
       this.drawnLetters = letters.filter(function (letter) {
         return letter.isDone();
       });
-    };
-
-    _proto.generateLetter = function generateLetter(letter) {
-      var newLetter = new Letter(_extends({}, letter, {
-        parent: this,
-        ctx: this.ctx
-      }));
-      return newLetter;
-    };
+    }
+    /**
+     * Sets the position of the current line
+     * @param x X-coordinate, relative to the parent block
+     * @param y Y-coordinate, relative to the parent block
+     */
+    ;
 
     _proto.setPosition = function setPosition(x, y) {
       this.x = x;
       this.y = y;
-    };
+    }
+    /**
+     * Used to check if all the letters in this line have been drawn.
+     */
+    ;
 
     _proto.isDone = function isDone() {
       return this.letters.length === 0;
-    };
+    }
+    /**
+     * Returns all the letters in this line including those that are to be animated.
+     */
+    ;
 
     _proto.getAllLetters = function getAllLetters() {
       return this._letters;
     }
     /**
-     * Remove the first item from the queue. Used when a letter has been drawn completely.
-     * The removed item is moved to the drawnLetters array
+     * Remove the first letter from the queue. Used when a letter has been drawn completely.
+     * The removed letter is moved to the drawnLetters array
      */
     ;
 
@@ -324,21 +419,25 @@
     ;
 
     _proto.render = function render(rafTime, prevRAFTime) {
-      this.ctx.save();
+      this.ctx.save(); // Set the position of the line
+
       this.ctx.translate(this.x, this.y);
 
       if (this.letters.length > 0) {
         var currentLetter = this.letters[0];
-        currentLetter.render(rafTime, prevRAFTime);
+        currentLetter.render(rafTime, prevRAFTime); // If the current letter is animated, then remove it from the queue and add it to the drawn letters
 
-        if (currentLetter.parts.length === 0) {
+        if (currentLetter.isDone()) {
           this.dequeue();
         }
-      }
+      } // Paint all the already animated letters
+      // The paint method will draw the line without changing the dashOffset
+
 
       this.drawnLetters.forEach(function (letter) {
         letter.paint();
-      });
+      }); // Restore canvas state (position)
+
       this.ctx.restore();
     };
 
@@ -352,174 +451,53 @@
       var _this;
 
       _this = _RenderBase.call(this, props) || this;
-      _this.x = props.x;
-      _this.y = props.y;
-      _this.width = props.width;
+      _this.x = props.options.x;
+      _this.y = props.options.y;
+      _this.width = props.options.width;
+      _this.height = 0;
       _this.lines = [];
       _this._lines = [];
       _this.drawnLines = [];
       _this.ctx = props.ctx;
       _this.previousRAFTime = 0;
       _this.totalPathLength = 0;
+      _this.text = [];
       _this.options = props.options;
       _this.name = 'block';
       _this.scale = props.options.fontSize / SCALEBASE;
+      _this.root = props.root;
+
+      _this.userDefinedRenderFn = function () {
+        return null;
+      };
+
+      _this.initTextToVaraChar();
+
+      _this.generatePositions();
+
       return _this;
-    }
-    /**
-     * Creates and adds a new line of text
-     * @param line The properties of the line to be added
-     */
+    } // Begin private functions
 
 
     var _proto = Block.prototype;
 
-    _proto.addLine = function addLine(line) {
-      var newLine = new Line(_extends({}, line, {
-        ctx: this.ctx,
-        parent: this
-      }));
-      this.lines.push(newLine);
-
-      this._lines.push(newLine);
-
-      return newLine;
-    };
-
-    _proto.getAllLetters = function getAllLetters() {
-      var letters = this._lines.map(function (item) {
-        return item._letters;
-      });
-
-      return letters.flat();
-    };
-
-    _proto.getLetterById = function getLetterById(id) {
-      var _this$getAllLetters$f;
-
-      return (_this$getAllLetters$f = this.getAllLetters().find(function (item) {
-        return item.character.id === id;
-      })) !== null && _this$getAllLetters$f !== void 0 ? _this$getAllLetters$f : false;
-    }
-    /**
-     * Remove the first item from the queue. Used when a text line has been drawn completely.
-     *
-     * The removed item is moved to the drawnParts array
-     */
-    ;
-
-    _proto.dequeue = function dequeue() {
-      var removedItem = this.lines.shift();
-      if (removedItem) this.lines.push(removedItem);
-    }
-    /**
-     * Increment or decrement the total path length
-     * @param pathLength Path length that is to be incremented or decrement
-     * @param action Whether to increment or decrement
-     */
-    ;
-
-    _proto.modifyPathLength = function modifyPathLength(pathLength, action) {
-      if (action === void 0) {
-        action = 'increment';
-      }
-
-      if (action === 'increment') {
-        this.totalPathLength += pathLength;
-      } else {
-        this.totalPathLength -= pathLength;
-      }
-
-      return this.totalPathLength;
-    }
-    /**
-     * Render the block
-     * @param rafTime The time value received from requestAnimationFrame
-     */
-    ;
-
-    _proto.render = function render(rafTime) {
+    _proto.initTextToVaraChar = function initTextToVaraChar() {
       var _this2 = this;
 
-      if (this.previousRAFTime === 0) {
-        this.previousRAFTime = rafTime;
-      }
-
-      this.ctx.save();
-      this.ctx.strokeStyle = this.options.color;
-      this.ctx.lineWidth = this.options.strokeWidth;
-      this.ctx.lineCap = 'round';
-      this.ctx.lineJoin = 'round';
-      this.drawnLines.forEach(function (line) {
-        line.render(rafTime, _this2.previousRAFTime);
-      });
-
-      if (this.lines.length > 0) {
-        var line = this.lines[0];
-        line.render(rafTime, this.previousRAFTime);
-
-        if (line.letters.length === 0) {
-          this.dequeue();
-        }
-      }
-
-      this.ctx.restore();
-      this.previousRAFTime = rafTime;
-    };
-
-    return Block;
-  }(RenderBase);
-
-  var ___varaCharId___ = 0;
-
-  var VaraChar = /*#__PURE__*/function () {
-    function VaraChar(props) {
-      var _props$isSpace;
-
-      this["char"] = props["char"];
-      this.fontItem = props.fontItem;
-      this.isSpace = (_props$isSpace = props.isSpace) !== null && _props$isSpace !== void 0 ? _props$isSpace : false;
-      this.id = ___varaCharId___;
-      ___varaCharId___++;
-    }
-
-    var _proto = VaraChar.prototype;
-
-    _proto.getFontItem = function getFontItem() {
-      return this.fontItem;
-    };
-
-    _proto.getId = function getId() {
-      return this.id;
-    };
-
-    return VaraChar;
-  }();
-
-  var RenderItem = /*#__PURE__*/function () {
-    function RenderItem(props) {
-      var _this = this;
-
-      this.textItem = _extends({}, props.options, props.textItem);
-      this.height = 0;
-      this.fontCharacters = props.fontCharacters;
-      this.ctx = props.ctx;
-      this.block = null;
-
-      if (typeof this.textItem.text === 'string') {
-        this.text = [this.textItem.text.split('').map(function (letter) {
+      if (typeof this.options.text === 'string') {
+        this.text = [this.options.text.split('').map(function (letter) {
           return new VaraChar({
             "char": letter,
-            fontItem: _this.fontCharacters[letter.charCodeAt(0)] || _this.fontCharacters['63'],
+            fontItem: _this2.root.fontCharacters[letter.charCodeAt(0)] || _this2.root.fontCharacters['63'],
             isSpace: letter === ' '
           });
         })];
-      } else if (Array.isArray(this.textItem.text)) {
-        this.text = this.textItem.text.map(function (line) {
+      } else if (Array.isArray(this.options.text)) {
+        this.text = this.options.text.map(function (line) {
           return line.split('').map(function (letter) {
             return new VaraChar({
               "char": letter,
-              fontItem: _this.fontCharacters[letter.charCodeAt(0)] || _this.fontCharacters['63'],
+              fontItem: _this2.root.fontCharacters[letter.charCodeAt(0)] || _this2.root.fontCharacters['63'],
               isSpace: letter === ' '
             });
           });
@@ -528,142 +506,76 @@
         // TODO: Show warning / error
         this.text = [];
       }
-    }
-
-    var _proto = RenderItem.prototype;
-
-    _proto.addLetter = function addLetter(_ref) {
-      var _this2 = this;
-
-      var letter = _ref.letter,
-          position = _ref.position;
-
-      // let textBlock: string[] = [];
-      // if (Array.isArray(position) && Array.isArray(this.textItem.text)) {
-      //     textBlock[position[0]] = `${this.textItem.text[position[0]].slice(
-      //         0,
-      //         position[1]
-      //     )}${letter}${this.textItem.text[position[0]].slice(position[1])}`;
-      // } else {
-      //     if (typeof position === 'number') {
-      //         textBlock = [
-      //             `${this.textItem.text+" ".slice(
-      //                 0,
-      //                 position
-      //             )}${letter}${this.textItem.text+" ".slice(position)}`,
-      //         ];
-      //     }
-      // }
-      if (typeof position === 'number') {
-        var textCharCount = 0;
-        this.text.forEach(function (textLine, index) {
-          console.log(textLine, position);
-
-          if (position <= textCharCount + textLine.length) {
-            console.log("Here");
-            console.log("Before", JSON.parse(JSON.stringify(_this2.text[index])));
-            _this2.text[index] = [].concat(textLine.slice(0, position - textCharCount), [new VaraChar({
-              "char": letter,
-              fontItem: _this2.fontCharacters[letter.charCodeAt(0)] || _this2.fontCharacters['63'],
-              isSpace: letter === ' '
-            })], textLine.slice(position - textCharCount));
-            console.log("After", JSON.parse(JSON.stringify(_this2.text[index])));
-          } else {
-            textCharCount += textLine.length;
-          }
-        });
-      }
-
-      this.regeneratePositions();
     };
 
-    _proto.regeneratePositions = function regeneratePositions() {
+    _proto.regeneratePositions = function regeneratePositions(lines) {
       var _this3 = this;
 
-      console.log(this.block);
-      var scale = this.textItem.fontSize / SCALEBASE;
+      var scale = this.scale;
       this.height = 0;
-      var lines = this.generateLineData(this.text);
-      var top = this.textItem.lineHeight;
-      var block = this.block;
-
-      if (lines.length > block._lines.length) {
-        while (lines.length > block._lines.length) {
-          block.addLine({
-            x: 0,
-            y: 0
-          });
-        }
-      }
-
+      var top = this.options.lineHeight;
+      var lettersToSetInLine = [];
       lines.forEach(function (line, lineIndex) {
         var left = 0;
         var x = 0,
             y = top;
 
-        if (_this3.textItem.textAlign === 'center') {
-          x = (_this3.textItem.width - line.width) / 2;
+        if (_this3.options.textAlign === 'center') {
+          x = (_this3.options.width - line.width) / 2;
         }
 
-        var lineClass = block.lines[lineIndex];
+        var lineClass = _this3.getLineAtIndex(lineIndex);
+
         lineClass.setPosition(x, y);
         var lettersToSet = [];
-        line.text.forEach(function (letter) {
-          if (letter.isSpace) {
+        line.text.forEach(function (_char) {
+          if (_char.isSpace) {
             left += WHITESPACE;
           } else {
-            var foundLetter = block.getLetterById(letter.id);
+            var foundLetter = _this3.getLetterByCharacterId(_char.id);
 
             if (foundLetter) {
-              foundLetter.parent = lineClass;
+              foundLetter.setParent(lineClass);
               foundLetter.setPosition(left, top);
               lettersToSet.push(foundLetter);
               left += foundLetter.character.getFontItem().w;
             } else {
-              lettersToSet.push(lineClass.addLetter({
-                character: letter,
-                width: letter.getFontItem().w,
-                x: left,
-                y: top
-              }));
-              left += letter.getFontItem().w;
+              // TODO: Show meaningful error
+              console.error("Error - Letter with id " + _char.id + " not found");
             }
           }
         });
-        top += _this3.textItem.lineHeight;
-        _this3.height += _this3.textItem.lineHeight * scale;
-        lineClass.setLetters(lettersToSet);
-        console.log(lettersToSet);
+        top += _this3.options.lineHeight;
+        _this3.height += _this3.options.lineHeight * scale;
+        lettersToSetInLine.push(lettersToSet);
+      });
+      this.getLines().forEach(function (line, lineIndex) {
+        line.setLetters(lettersToSetInLine[lineIndex]);
       });
     };
 
     _proto.generatePositions = function generatePositions() {
       var _this4 = this;
 
-      var scale = this.textItem.fontSize / SCALEBASE;
+      var scale = this.scale;
       this.height = 0;
       var lines = this.generateLineData(this.text);
-      var top = this.textItem.lineHeight;
-      var block = new Block({
-        width: this.textItem.width,
-        x: this.textItem.x,
-        y: this.textItem.y,
-        ctx: this.ctx,
-        options: this.textItem
-      });
+      console.log(lines);
+      var top = this.options.lineHeight;
       lines.forEach(function (line) {
         var left = 0;
         var x = 0,
             y = top;
 
-        if (_this4.textItem.textAlign === 'center') {
-          x = (_this4.textItem.width - line.width) / 2;
+        if (_this4.options.textAlign === 'center') {
+          x = (_this4.options.width - line.width) / 2;
         }
 
-        var lineClass = block.addLine({
+        var lineClass = _this4.addLine({
           x: x,
           y: y
         });
+
         line.text.forEach(function (letter) {
           if (letter.isSpace) {
             left += WHITESPACE;
@@ -678,16 +590,15 @@
             left += currentLetter.w;
           }
         });
-        top += _this4.textItem.lineHeight;
-        _this4.height += _this4.textItem.lineHeight * scale;
+        top += _this4.options.lineHeight;
+        _this4.height += _this4.options.lineHeight * scale;
       });
-      this.block = block;
     };
 
     _proto.generateLineData = function generateLineData(lines) {
       var _this5 = this;
 
-      var scale = this.textItem.fontSize / SCALEBASE;
+      var scale = this.options.fontSize / SCALEBASE;
       var returnData = [{
         text: [],
         width: 0
@@ -718,11 +629,11 @@
             wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
           });
 
-          if (((_returnData$width = (_returnData = returnData[lines.length - 1]) === null || _returnData === void 0 ? void 0 : _returnData.width) !== null && _returnData$width !== void 0 ? _returnData$width : 0) + wordWidth + 5 * scale + spaceWidth + _this5.textItem.x * scale > _this5.textItem.width) {
+          if (((_returnData$width = (_returnData = returnData[returnData.length - 1]) == null ? void 0 : _returnData.width) != null ? _returnData$width : 0) + wordWidth + spaceWidth + _this5.options.x > _this5.options.width) {
             returnData.push({
               text: [].concat(word, [new VaraChar({
                 "char": ' ',
-                fontItem: _this5.fontCharacters['63'],
+                fontItem: _this5.root.fontCharacters['63'],
                 isSpace: true
               })]),
               width: wordWidth
@@ -732,7 +643,7 @@
             returnData[returnData.length - 1] = {
               text: [].concat(returnData[returnData.length - 1].text, word, [new VaraChar({
                 "char": ' ',
-                fontItem: _this5.fontCharacters['63'],
+                fontItem: _this5.root.fontCharacters['63'],
                 isSpace: true
               })]),
               width: returnData[returnData.length - 1].width + wordWidth
@@ -742,22 +653,301 @@
         });
       });
       return returnData;
+    } // End private functions
+
+    /**
+     * Creates and adds a new line of text
+     * @param line The properties of the line to be added
+     */
+    ;
+
+    _proto.addLine = function addLine(line) {
+      var newLine = new Line(_extends({}, line, {
+        ctx: this.ctx,
+        parent: this
+      }));
+      this.lines.push(newLine);
+
+      this._lines.push(newLine);
+
+      return newLine;
     };
 
-    _proto.render = function render(rafTime) {
-      if (this.block) {
-        this.block.render(rafTime);
+    _proto.removeLine = function removeLine(index) {
+      if (index) {
+        var foundLine = this._lines[index];
+
+        if (foundLine) {
+          this._lines.splice(index, 1);
+
+          this.lines = this.lines.filter(function (line) {
+            return line.id !== foundLine.id;
+          });
+          this.drawnLines = this.drawnLines.filter(function (line) {
+            return line.id !== foundLine.id;
+          });
+        }
+      } else {
+        var toRemove = this._lines[this._lines.length - 1];
+
+        this._lines.splice(this._lines.length - 1, 1);
+
+        this.lines = this.lines.filter(function (line) {
+          return line.id !== toRemove.id;
+        });
+        this.drawnLines = this.drawnLines.filter(function (line) {
+          return line.id !== toRemove.id;
+        });
       }
     };
 
-    _proto.rendered = function rendered() {
-      var _this$block;
+    _proto.getCursorPosition = function getCursorPosition(position) {
+      var _this6 = this;
 
-      return ((_this$block = this.block) === null || _this$block === void 0 ? void 0 : _this$block.lines.length) === 0;
+      var textCharCount = 0;
+      var charId = -1;
+      this.text.forEach(function (textLine, index) {
+        if (index < textCharCount + textLine.length) {
+          charId = _this6.text[index][position - textCharCount].id;
+        } else {
+          textCharCount += textLine.length;
+        }
+      });
+
+      if (charId > -1) {
+        var letter = this.getLetterByCharacterId(charId);
+
+        if (letter) {
+          var line = letter.getParent('line', letter);
+          var xPosition = this.x + line.x + (letter.x + letter.width) * this.scale;
+          var yPosition = this.y + line.y;
+          console.log({
+            x: xPosition,
+            y: yPosition
+          });
+          return {
+            x: xPosition,
+            y: yPosition
+          };
+        } else {
+          console.warn('Letter not found');
+          return false;
+        }
+      } else {
+        console.warn('Character Not found');
+        return false;
+      }
     };
 
-    return RenderItem;
-  }();
+    _proto.addLetter = function addLetter(_ref) {
+      var _this7 = this;
+
+      var letter = _ref.letter,
+          position = _ref.position;
+      // let textBlock: string[] = [];
+      // if (Array.isArray(position) && Array.isArray(this.textItem.text)) {
+      //     textBlock[position[0]] = `${this.textItem.text[position[0]].slice(
+      //         0,
+      //         position[1]
+      //     )}${letter}${this.textItem.text[position[0]].slice(position[1])}`;
+      // } else {
+      //     if (typeof position === 'number') {
+      //         textBlock = [
+      //             `${this.textItem.text+" ".slice(
+      //                 0,
+      //                 position
+      //             )}${letter}${this.textItem.text+" ".slice(position)}`,
+      //         ];
+      //     }
+      // }
+      var newChar = new VaraChar({
+        "char": letter,
+        fontItem: this.root.fontCharacters[letter.charCodeAt(0)] || this.root.fontCharacters['63'],
+        isSpace: letter === ' '
+      });
+
+      if (typeof position === 'number') {
+        var textCharCount = 0;
+        this.text.forEach(function (textLine, index) {
+          if (position <= textCharCount + textLine.length) {
+            _this7.text[index] = [].concat(textLine.slice(0, position - textCharCount), [newChar], textLine.slice(position - textCharCount));
+          } else {
+            textCharCount += textLine.length;
+          }
+        });
+      }
+
+      var lines = this.generateLineData(this.text);
+
+      if (lines.length > this.getLineCount()) {
+        while (lines.length > this.getLineCount()) {
+          this.addLine({
+            x: 0,
+            y: 0
+          });
+        }
+      }
+
+      this.getLastLine().addLetter({
+        character: newChar,
+        width: newChar.fontItem.w,
+        x: 0,
+        y: 0
+      });
+      this.regeneratePositions(lines);
+    };
+
+    _proto.removeLetter = function removeLetter(_ref2) {
+      var _this8 = this;
+
+      var position = _ref2.position;
+      var charId = -1;
+
+      if (typeof position === 'number') {
+        var textCharCount = 0;
+        this.text.forEach(function (textLine, index) {
+          if (position <= textCharCount + textLine.length) {
+            if (position <= textCharCount + textLine.length) {
+              charId = _this8.text[index][position - textCharCount].id;
+
+              _this8.text[index].splice(position - textCharCount, 1);
+            } else {
+              textCharCount += textLine.length;
+            }
+          } else {
+            textCharCount += textLine.length;
+          }
+        });
+      }
+
+      var lines = this.generateLineData(this.text);
+
+      if (lines.length < this.getLineCount()) {
+        while (lines.length < this.getLineCount()) {
+          this.removeLine();
+        }
+      }
+
+      var letter = this.getAllLetters().find(function (item) {
+        return item.character.getId() === charId;
+      });
+
+      if (letter) {
+        var line = letter.getParent('line', letter);
+
+        if (line) {
+          line.removeLetter(letter.id);
+        }
+      }
+
+      this.regeneratePositions(lines);
+    };
+
+    _proto.getAllLetters = function getAllLetters() {
+      var letters = this._lines.map(function (item) {
+        return item.getAllLetters();
+      });
+
+      return letters.flat();
+    };
+
+    _proto.getLines = function getLines() {
+      return this._lines;
+    };
+
+    _proto.getLineCount = function getLineCount() {
+      return this._lines.length;
+    };
+
+    _proto.getLineAtIndex = function getLineAtIndex(index) {
+      return this._lines[index];
+    };
+
+    _proto.getLastLine = function getLastLine() {
+      return this._lines[this._lines.length - 1];
+    };
+
+    _proto.getLetterByCharacterId = function getLetterByCharacterId(id) {
+      var _this$getAllLetters$f;
+
+      return (_this$getAllLetters$f = this.getAllLetters().find(function (item) {
+        return item.character.id === id;
+      })) != null ? _this$getAllLetters$f : false;
+    };
+
+    _proto.setRenderFunction = function setRenderFunction(fn) {
+      this.userDefinedRenderFn = fn;
+    }
+    /**
+     * Remove the first line from the queue of lines. Used when a text line has been drawn completely.
+     *
+     * The removed item is moved to the drawnParts array
+     */
+    ;
+
+    _proto.dequeue = function dequeue() {
+      var removedItem = this.lines.shift();
+      if (removedItem) this.drawnLines.push(removedItem);
+    }
+    /**
+     * Increment or decrement the total path length
+     * @param pathLength Path length that is to be incremented or decrement
+     * @param action Whether to increment or decrement
+     */
+    ;
+
+    _proto.modifyPathLength = function modifyPathLength(pathLength, action) {
+      if (action === void 0) {
+        action = 'increment';
+      }
+
+      if (action === 'increment') {
+        this.totalPathLength += pathLength;
+      } else {
+        this.totalPathLength -= pathLength;
+      }
+
+      return this.totalPathLength;
+    }
+    /**
+     * Render the block
+     * @param rafTime The time value received from requestAnimationFrame
+     */
+    ;
+
+    _proto.render = function render(rafTime) {
+      var _this9 = this;
+
+      if (this.previousRAFTime === 0) {
+        this.previousRAFTime = rafTime;
+      }
+
+      this.ctx.save();
+      this.ctx.strokeStyle = this.options.color;
+      this.ctx.lineWidth = this.options.strokeWidth;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.drawnLines.forEach(function (line) {
+        line.render(rafTime, _this9.previousRAFTime);
+      });
+
+      if (this.lines.length > 0) {
+        var line = this.lines[0];
+
+        if (line.isDone()) {
+          this.dequeue();
+        }
+
+        line.render(rafTime, this.previousRAFTime);
+      }
+
+      this.userDefinedRenderFn(this.ctx, rafTime);
+      this.ctx.restore();
+      this.previousRAFTime = rafTime;
+    };
+
+    return Block;
+  }(RenderBase);
 
   var Vara = /*#__PURE__*/function () {
     function Vara(elem, fontSource, text, options) {
@@ -766,10 +956,7 @@
       this.fontSource = fontSource;
       this.options = options;
       this.textItems = text;
-      this.renderData = {
-        nonQueued: [],
-        queued: []
-      };
+      this.blocks = [];
       this.rendered = false;
       this.fontCharacters = {};
       this.canvasWidth = 0;
@@ -832,13 +1019,15 @@
       xmlhttp.open('GET', this.fontSource, true);
 
       xmlhttp.onreadystatechange = function () {
-        if (xmlhttp.readyState == 4) {
-          if (xmlhttp.status == 200) {
+        if (xmlhttp.readyState === 4) {
+          if (xmlhttp.status === 200) {
             var contents = JSON.parse(xmlhttp.responseText);
             _this.fontCharacters = contents.c;
             _this.fontProperties = contents.p;
 
             _this.preRender();
+
+            if (_this.readyfn) _this.readyfn();
 
             _this.render();
           }
@@ -846,6 +1035,10 @@
       };
 
       xmlhttp.send(null);
+    };
+
+    _proto.ready = function ready(fn) {
+      this.readyfn = fn;
     };
 
     _proto.onDraw = function onDraw(fn) {
@@ -897,19 +1090,13 @@
         });
       });
       this.textItems.forEach(function (item) {
-        var renderItem = new RenderItem({
-          fontCharacters: _this3.fontCharacters,
-          options: _this3.options,
-          textItem: item,
+        var block = new Block({
+          root: _this3,
+          options: _extends({}, _this3.options, item),
           ctx: _this3.ctx
         });
-        renderItem.generatePositions();
 
-        if (item.queued) {
-          _this3.renderData.queued.push(renderItem);
-        } else {
-          _this3.renderData.nonQueued.push(renderItem);
-        }
+        _this3.blocks.push(block);
       });
     };
 
@@ -927,40 +1114,20 @@
       }
 
       this.ctx.clearRect(0, 0, this.canvas.width, canvasHeight);
-      this.renderData.nonQueued.forEach(function (item) {
+      this.blocks.forEach(function (item) {
         item.render(rafTime);
       });
-
-      if (this.renderData.queued.length > 0) {
-        var queueHead = this.renderData.queued[0];
-        queueHead.render(rafTime);
-
-        if (queueHead.rendered()) {
-          this.dequeue();
-        }
-      }
-
       window.requestAnimationFrame(function (time) {
         return _this4.render(time);
       });
-    }
-    /**
-     * Remove the first item from the queue. Used when a block has been drawn completely.
-     * The removed item is moved to the drawnLetters array
-     */
-    ;
-
-    _proto.dequeue = function dequeue() {
-      var removedItem = this.renderData.queued.shift();
-      if (removedItem) this.renderData.nonQueued.push(removedItem);
     } // TODO: Make proper calculation function.
     ;
 
     _proto.calculateCanvasHeight = function calculateCanvasHeight() {
       var height = 0;
-      [].concat(this.renderData.nonQueued, this.renderData.queued).forEach(function (item) {
-        if (item.height && item.textItem.y) {
-          height += item.height + item.textItem.y;
+      this.blocks.forEach(function (item) {
+        if (item.height && item.options.y) {
+          height += item.height + item.options.y;
         }
       });
       return height + 50;
@@ -970,16 +1137,44 @@
       var letter = _ref.letter,
           id = _ref.id,
           position = _ref.position;
-      var block = [].concat(this.renderData.nonQueued, this.renderData.queued).find(function (item) {
-        return item.textItem.id === id;
+      var block = this.blocks.find(function (item) {
+        return item.options.id === id;
       });
-      console.log(letter, position);
-      block === null || block === void 0 ? void 0 : block.addLetter({
+      block == null ? void 0 : block.addLetter({
         letter: letter,
         position: position
       }); // if(block) {
       //     block.
       // }
+    };
+
+    _proto.removeLetter = function removeLetter(_ref2) {
+      var id = _ref2.id,
+          position = _ref2.position;
+      var block = this.blocks.find(function (item) {
+        return item.options.id === id;
+      });
+      block == null ? void 0 : block.removeLetter({
+        position: position
+      }); // if(block) {
+      //     block.
+      // }
+    };
+
+    _proto.getCursorPosition = function getCursorPosition(_ref3) {
+      var position = _ref3.position,
+          id = _ref3.id;
+      var block = this.blocks.find(function (item) {
+        return item.options.id === id;
+      });
+      return block == null ? void 0 : block.getCursorPosition(position);
+    };
+
+    _proto.setRenderFunction = function setRenderFunction(id, fn) {
+      var block = this.blocks.find(function (item) {
+        return item.options.id === id;
+      });
+      return block == null ? void 0 : block.setRenderFunction(fn);
     }
     /**
      * Creates and returns an SVG element

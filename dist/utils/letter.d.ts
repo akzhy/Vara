@@ -1,9 +1,9 @@
-import { BlockName } from "../types";
-import Block from "./block";
-import VaraChar from "./char";
-import LetterPart, { LetterPartProps } from "./letterpart";
-import Line from "./line";
-import RenderBase from "./renderbase";
+import { BlockName } from '../types';
+import Block from './block';
+import VaraChar from './char';
+import LetterPart, { LetterPartProps } from './letterpart';
+import Line from './line';
+import RenderBase from './renderbase';
 export interface LetterProps {
     x: number;
     y: number;
@@ -17,6 +17,7 @@ export default class Letter extends RenderBase {
     y: number;
     width: number;
     character: VaraChar;
+    id: number;
     parts: LetterPart[];
     drawnParts: LetterPart[];
     name: BlockName;
@@ -27,7 +28,8 @@ export default class Letter extends RenderBase {
      * Add a new part to the queue
      * @param part The part to be added
      */
-    addPart(part: Omit<LetterPartProps, "ctx" | "parent">): void;
+    addPart(part: Omit<LetterPartProps, 'ctx' | 'parent'>): void;
+    setParent(parent: Line): void;
     isDone(): boolean;
     /**
      * Remove the first item from the queue. Used when a part has been drawn completely.

@@ -1,14 +1,12 @@
-import { VaraGeneralOptions, VaraText, RenderData, VaraFontItem, ObjectKeys } from './types';
+import { VaraGeneralOptions, VaraText, VaraFontItem, ObjectKeys } from './types';
+import Block from './utils/block';
 export default class Vara {
     elementName: string;
     element: HTMLElement;
     fontSource: string;
     options: VaraGeneralOptions;
     textItems: VaraText[];
-    renderData: {
-        queued: RenderData;
-        nonQueued: RenderData;
-    };
+    blocks: Block[];
     rendered: boolean;
     defaultOptions: Required<VaraGeneralOptions>;
     defaultCharacters: {
@@ -29,12 +27,14 @@ export default class Vara {
         space: number;
         tf: number;
     };
-    onDrawF?: (fn?: Required<RenderData>) => void;
+    onDrawF?: () => void;
+    private readyfn?;
     WHITESPACE: number;
     SCALEBASE: number;
     constructor(elem: string, fontSource: string, text: VaraText[], options: VaraGeneralOptions);
     private init;
-    onDraw(fn: (a?: Required<RenderData>) => void): void;
+    ready(fn: () => void): void;
+    onDraw(fn: () => void): void;
     /**
      * Sets default option value for all existing option properties.
      * If an option value is not provided, then it will first check if it is given in the global options, if not it will use the default option.
@@ -45,17 +45,24 @@ export default class Vara {
      */
     private preRender;
     private render;
-    /**
-     * Remove the first item from the queue. Used when a block has been drawn completely.
-     * The removed item is moved to the drawnLetters array
-     */
-    private dequeue;
     calculateCanvasHeight(): number;
     addLetter({ letter, id, position, }: {
         letter: string;
         id: string;
         position: number;
     }): void;
+    removeLetter({ id, position }: {
+        id: string;
+        position: number;
+    }): void;
+    getCursorPosition({ position, id }: {
+        position: number;
+        id: string;
+    }): false | {
+        x: number;
+        y: number;
+    } | undefined;
+    setRenderFunction(id: string, fn: (ctx: CanvasRenderingContext2D) => void): void | undefined;
     /**
      * Creates and returns an SVG element
      * @param n The name of the SVG node to be created

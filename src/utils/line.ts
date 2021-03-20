@@ -1,7 +1,6 @@
-import { BlockName } from "../types";
-import Block from "./block";
-import Letter, { LetterProps } from "./letter";
-import RenderBase from "./renderbase";
+import Block from './block';
+import Letter, { LetterProps } from './letter';
+import RenderBase from './renderbase';
 
 export interface LineProps {
     x: number;
@@ -10,18 +9,21 @@ export interface LineProps {
     parent: Block;
 }
 
+let lineId = 0;
+
 /**
  * Used to represent a line of text drawn in the canvas.
- * 
+ *
  */
+
 export default class Line extends RenderBase {
     x: number;
     y: number;
-    ctx: CanvasRenderingContext2D;
     letters: Letter[];
-    private _letters: Letter[];
     drawnLetters: Letter[];
-    name: BlockName;
+    id: number;
+
+    private _letters: Letter[];
 
     constructor(props: LineProps) {
         super(props);
@@ -41,22 +43,25 @@ export default class Line extends RenderBase {
         this._letters = [];
 
         // The name of this class.
-        this.name = "line";
+        // Name is used for finding a specific parent using the getParent method
+        this.name = 'line';
+
+        this.id = lineId;
+        lineId++;
     }
 
     /**
      * Add a new letter to this line
      * @param letter - The letter to be added
      */
-    addLetter(letter: Omit<LetterProps, "ctx"|"parent"> & { parent?: Line}) {
-
+    addLetter(letter: Omit<LetterProps, 'ctx' | 'parent'> & { parent?: Line }) {
         // Create the letter
 
         const newLetter = new Letter({
             ...letter,
             parent: letter.parent ?? this,
-            ctx: this.ctx
-        })
+            ctx: this.ctx,
+        });
 
         // Create all the parts of the letter
         // A letter can have multiple parts.
@@ -71,7 +76,7 @@ export default class Line extends RenderBase {
                 dashOffset: 0,
                 width: path.w,
             });
-        })
+        });
 
         // The letter is pushed to both letters and _letters array
         this.letters.push(newLetter);
@@ -81,11 +86,19 @@ export default class Line extends RenderBase {
         return newLetter;
     }
 
+    removeLetter(letterId: number) {
+        this._letters = this._letters.filter(letter => letter.id !== letterId);
+        this.letters = this.letters.filter(letter => letter.id !== letterId);
+        this.drawnLetters = this.drawnLetters.filter(
+            letter => letter.id !== letterId
+        );
+    }
+
     /**
      * Override the letters of this line.
-     * 
+     *
      * Letter states are preserved.
-     * 
+     *
      * @param letters The new letters of the line
      */
     setLetters(letters: Letter[]) {
@@ -99,7 +112,7 @@ export default class Line extends RenderBase {
      * @param x X-coordinate, relative to the parent block
      * @param y Y-coordinate, relative to the parent block
      */
-    setPosition(x:number, y:number) {
+    setPosition(x: number, y: number) {
         this.x = x;
         this.y = y;
     }
@@ -107,14 +120,14 @@ export default class Line extends RenderBase {
     /**
      * Used to check if all the letters in this line have been drawn.
      */
-    isDone(){
+    isDone() {
         return this.letters.length === 0;
     }
 
     /**
      * Returns all the letters in this line including those that are to be animated.
      */
-    getAllLetters(){
+    getAllLetters() {
         return this._letters;
     }
 
@@ -131,18 +144,18 @@ export default class Line extends RenderBase {
      * Render the current line
      * @param rafTime The time value received from requestAnimationFrame
      */
-    render(rafTime: number, prevRAFTime: number){
+    render(rafTime: number, prevRAFTime: number) {
         this.ctx.save();
 
         // Set the position of the line
         this.ctx.translate(this.x, this.y);
 
-        if(this.letters.length > 0) {
+        if (this.letters.length > 0) {
             const currentLetter = this.letters[0];
             currentLetter.render(rafTime, prevRAFTime);
 
             // If the current letter is animated, then remove it from the queue and add it to the drawn letters
-            if(currentLetter.isDone()) {
+            if (currentLetter.isDone()) {
                 this.dequeue();
             }
         }
@@ -152,7 +165,7 @@ export default class Line extends RenderBase {
 
         this.drawnLetters.forEach(letter => {
             letter.paint();
-        })
+        });
 
         // Restore canvas state (position)
         this.ctx.restore();

@@ -2,7 +2,6 @@ import Block from "./utils/block";
 import Letter from "./utils/letter";
 import LetterPart from "./utils/letterpart";
 import Line from "./utils/line";
-import RenderItem from "./utils/renderitem";
 export declare type VaraGeneralOptions = {
     fontSize?: number;
     strokeWidth?: number;
@@ -28,7 +27,6 @@ export declare type VaraTextOptions = VaraGeneralOptions & {
 export declare type VaraText = VaraTextOptions & {
     text: string | string[];
 };
-export declare type RenderData = RenderItem[];
 export declare type VaraFontItem = {
     paths: Array<{
         w: number;
