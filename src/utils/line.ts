@@ -23,8 +23,6 @@ export default class Line extends RenderBase {
     drawnLetters: Letter[];
     id: number;
 
-    private _letters: Letter[];
-
     constructor(props: LineProps) {
         super(props);
 
@@ -38,9 +36,6 @@ export default class Line extends RenderBase {
 
         // This will contain all the letters that have already been drawn (animated).
         this.drawnLetters = [];
-
-        // Contains both drawn and queued letters in the order they were created
-        this._letters = [];
 
         // The name of this class.
         // Name is used for finding a specific parent using the getParent method
@@ -78,16 +73,13 @@ export default class Line extends RenderBase {
             });
         });
 
-        // The letter is pushed to both letters and _letters array
         this.letters.push(newLetter);
-        this._letters.push(newLetter);
 
         // Return the newly created letter
         return newLetter;
     }
 
     removeLetter(letterId: number) {
-        this._letters = this._letters.filter(letter => letter.id !== letterId);
         this.letters = this.letters.filter(letter => letter.id !== letterId);
         this.drawnLetters = this.drawnLetters.filter(
             letter => letter.id !== letterId
@@ -102,7 +94,6 @@ export default class Line extends RenderBase {
      * @param letters The new letters of the line
      */
     setLetters(letters: Letter[]) {
-        this._letters = letters;
         this.letters = letters.filter(letter => !letter.isDone());
         this.drawnLetters = letters.filter(letter => letter.isDone());
     }
@@ -128,7 +119,7 @@ export default class Line extends RenderBase {
      * Returns all the letters in this line including those that are to be animated.
      */
     getAllLetters() {
-        return this._letters;
+        return [...this.letters, ...this.drawnLetters];
     }
 
     /**

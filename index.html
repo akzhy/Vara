@@ -69,24 +69,26 @@
             });
 
             const input = document.querySelector('#text');
-            input.addEventListener('keyup', function(e) {
+            input.addEventListener('keydown', function(e) {
                 if (e.which === 8) {
-                    console.log(input.value);
                     vara.removeLetter({
                         position: input.value.length,
                         id: 'modify',
                     });
                 } else {
-                    vara.addLetter({
-                        letter: input.value[input.value.length - 1],
-                        id: 'modify',
-                        position: input.value.length - 1,
-                    });
+                    if(e.key.length === 1) {;
+                        vara.addLetter({
+                            letter: e.key,
+                            id: 'modify',
+                            position: input.value.length,
+                        });
+                    }
+                    // console.log(input.value[input.value.length - 1]);
                     cursorData = {
                         ...cursorData,
                         ...vara.getCursorPosition({
                             id: 'modify',
-                            position: input.value.length - 1,
+                            position: input.value.length,
                         }),
                     };
                 }

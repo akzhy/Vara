@@ -126,6 +126,9 @@ export default class Vara {
                     const contents = JSON.parse(xmlhttp.responseText);
                     this.fontCharacters = contents.c;
                     this.fontProperties = contents.p;
+                    if (this.fontCharacters['32'] === undefined) {
+                        this.createWhitespaceLine();
+                    }
                     this.preRender();
                     if (this.readyfn) this.readyfn();
                     this.render();
@@ -209,6 +212,25 @@ export default class Vara {
         });
     }
 
+    private createWhitespaceLine() {
+        const path = `m0,0 l0,0 ${this.WHITESPACE},0`;
+        const fontItem: VaraFontItem = {
+            paths: [
+                {
+                    d: path,
+                    dx: 0,
+                    h: 1,
+                    mx: 0,
+                    my: 0,
+                    pl: this.WHITESPACE,
+                    w: this.WHITESPACE,
+                },
+            ],
+            w: this.WHITESPACE,
+        };
+        this.fontCharacters['32'] = fontItem;
+    }
+
     private render(rafTime = 0) {
         let canvasHeight = this.calculateCanvasHeight();
         if (canvasHeight !== this.canvas.height) {
@@ -244,6 +266,7 @@ export default class Vara {
         position: number;
     }) {
         const block = this.blocks.find(item => item.options.id === id);
+        console.log(letter);
         block?.addLetter({ letter, position });
         // if(block) {
         //     block.

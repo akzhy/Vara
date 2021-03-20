@@ -1,7 +1,6 @@
 import Vara from '..';
 import { BlockName, VaraText } from '../types';
 import VaraChar from './char';
-import { SCALEBASE, WHITESPACE } from './constants';
 import Letter from './letter';
 import Line, { LineProps } from './line';
 import RenderBase from './renderbase';
@@ -28,7 +27,6 @@ export default class Block extends RenderBase {
     text: VaraChar[][];
 
     private root: Vara;
-    private _lines: Line[];
     private userDefinedRenderFn: (
         ctx: CanvasRenderingContext2D,
         rafTime: number
@@ -45,7 +43,6 @@ export default class Block extends RenderBase {
         this.height = 0;
 
         this.lines = [];
-        this._lines = [];
         this.drawnLines = [];
         this.ctx = props.ctx;
         this.previousRAFTime = 0;
@@ -55,8 +52,8 @@ export default class Block extends RenderBase {
 
         this.name = 'block';
 
-        this.scale = props.options.fontSize / SCALEBASE;
         this.root = props.root;
+        this.scale = props.options.fontSize / this.root.SCALEBASE;
 
         this.userDefinedRenderFn = () => null;
 
@@ -118,7 +115,7 @@ export default class Block extends RenderBase {
         lines.forEach((line, lineIndex) => {
             let left = 0;
             let x = 0,
-                y = top;
+                y = top * this.scale;
             if (this.options.textAlign === 'center') {
                 x = (this.options.width - line.width) / 2;
             }
@@ -130,12 +127,12 @@ export default class Block extends RenderBase {
 
             line.text.forEach(char => {
                 if (char.isSpace) {
-                    left += WHITESPACE;
+                    left += this.root.WHITESPACE;
                 } else {
                     let foundLetter = this.getLetterByCharacterId(char.id);
                     if (foundLetter) {
                         foundLetter.setParent(lineClass);
-                        foundLetter.setPosition(left, top);
+                        foundLetter.setPosition(left, 0);
                         lettersToSet.push(foundLetter);
 
                         left += foundLetter.character.getFontItem().w;
@@ -163,7 +160,6 @@ export default class Block extends RenderBase {
         this.height = 0;
 
         const lines = this.generateLineData(this.text);
-        console.log(lines);
 
         let top = this.options.lineHeight;
         lines.forEach(line => {
@@ -181,13 +177,13 @@ export default class Block extends RenderBase {
 
             line.text.forEach(letter => {
                 if (letter.isSpace) {
-                    left += WHITESPACE;
+                    left += this.root.WHITESPACE;
                 } else {
                     const currentLetter = letter.getFontItem();
 
                     lineClass.addLetter({
                         x: left,
-                        y: top,
+                        y: 0,
                         width: currentLetter.w,
                         character: letter,
                     });
@@ -201,7 +197,7 @@ export default class Block extends RenderBase {
     }
 
     private generateLineData(lines: VaraChar[][]) {
-        let scale = this.options.fontSize / SCALEBASE;
+        let scale = this.options.fontSize / this.root.SCALEBASE;
 
         const returnData: {
             text: VaraChar[];
@@ -243,6 +239,12 @@ export default class Block extends RenderBase {
                         (currentLetter.w + pathPositionCorrection) * scale;
                 });
 
+                const spaceChar = new VaraChar({
+                    char: ' ',
+                    fontItem: this.root.fontCharacters['32'],
+                    isSpace: true,
+                });
+
                 if (
                     (returnData[returnData.length - 1]?.width ?? 0) +
                         wordWidth +
@@ -251,14 +253,7 @@ export default class Block extends RenderBase {
                     this.options.width
                 ) {
                     returnData.push({
-                        text: [
-                            ...word,
-                            new VaraChar({
-                                char: ' ',
-                                fontItem: this.root.fontCharacters['63'],
-                                isSpace: true,
-                            }),
-                        ],
+                        text: [...word, spaceChar],
                         width: wordWidth,
                     });
                     spaceWidth = 0;
@@ -267,16 +262,12 @@ export default class Block extends RenderBase {
                         text: [
                             ...returnData[returnData.length - 1].text,
                             ...word,
-                            new VaraChar({
-                                char: ' ',
-                                fontItem: this.root.fontCharacters['63'],
-                                isSpace: true,
-                            }),
+                            spaceChar,
                         ],
                         width:
                             returnData[returnData.length - 1].width + wordWidth,
                     };
-                    spaceWidth += WHITESPACE * scale;
+                    spaceWidth += this.root.WHITESPACE * scale;
                 }
             });
         });
@@ -298,18 +289,16 @@ export default class Block extends RenderBase {
         });
 
         this.lines.push(newLine);
-        this._lines.push(newLine);
 
         return newLine;
     }
 
     removeLine(index?: number) {
+        const allLines = this.getLines();
         if (index) {
-            const foundLine = this._lines[index];
+            const foundLine = allLines[index];
 
             if (foundLine) {
-                this._lines.splice(index, 1);
-
                 this.lines = this.lines.filter(
                     line => line.id !== foundLine.id
                 );
@@ -321,8 +310,7 @@ export default class Block extends RenderBase {
                 //console.warn();
             }
         } else {
-            const toRemove = this._lines[this._lines.length - 1];
-            this._lines.splice(this._lines.length - 1, 1);
+            const toRemove = allLines[allLines.length - 1];
 
             this.lines = this.lines.filter(line => line.id !== toRemove.id);
             this.drawnLines = this.drawnLines.filter(
@@ -349,13 +337,9 @@ export default class Block extends RenderBase {
                 const line = letter.getParent('line', letter) as Line;
 
                 const xPosition =
-                    this.x + line.x + (letter.x + letter.width) * this.scale;
-                const yPosition = this.y + line.y;
+                    line.x + (letter.x + letter.width) * this.scale;
+                const yPosition = line.y;
 
-                console.log({
-                    x: xPosition,
-                    y: yPosition,
-                });
                 return {
                     x: xPosition,
                     y: yPosition,
@@ -401,6 +385,8 @@ export default class Block extends RenderBase {
                 this.root.fontCharacters['63'],
             isSpace: letter === ' ',
         });
+
+        console.log(letter);
 
         if (typeof position === 'number') {
             let textCharCount = 0;
@@ -481,24 +467,25 @@ export default class Block extends RenderBase {
     }
 
     getAllLetters() {
-        const letters = this._lines.map(item => item.getAllLetters());
+        const letters = this.getLines().map(item => item.getAllLetters());
         return letters.flat();
     }
 
     getLines() {
-        return this._lines;
+        return [...this.lines, ...this.drawnLines];
     }
 
     getLineCount() {
-        return this._lines.length;
+        return this.getLines().length;
     }
 
     getLineAtIndex(index: number) {
-        return this._lines[index];
+        return this.getLines()[index];
     }
 
     getLastLine() {
-        return this._lines[this._lines.length - 1];
+        const allLines = this.getLines();
+        return allLines[allLines.length - 1];
     }
 
     getLetterByCharacterId(id: number) {
@@ -550,6 +537,7 @@ export default class Block extends RenderBase {
         }
 
         this.ctx.save();
+        this.ctx.translate(this.x, this.y);
         this.ctx.strokeStyle = this.options.color;
         this.ctx.lineWidth = this.options.strokeWidth;
         this.ctx.lineCap = 'round';

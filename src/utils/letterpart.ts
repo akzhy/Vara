@@ -43,7 +43,6 @@ export default class LetterPart extends RenderBase {
      * Paints the path
      */
     paint() {
-        // console.log(this.x,this.y);
         this.ctx.save();
         this.ctx.stroke(
             new Path2D(this.processPath(this.path, this.x, this.y))

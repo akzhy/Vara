@@ -17,7 +17,6 @@ export default class Line extends RenderBase {
     letters: Letter[];
     drawnLetters: Letter[];
     id: number;
-    private _letters;
     constructor(props: LineProps);
     /**
      * Add a new letter to this line

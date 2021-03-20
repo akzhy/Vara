@@ -23,7 +23,6 @@ export default class Block extends RenderBase {
     options: Required<VaraText>;
     text: VaraChar[][];
     private root;
-    private _lines;
     private userDefinedRenderFn;
     name: BlockName;
     constructor(props: BlockProps);

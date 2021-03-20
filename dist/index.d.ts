@@ -44,6 +44,7 @@ export default class Vara {
      * Performs some actions before rendering starts. These include finding the pathLength of each path and generating the render data.
      */
     private preRender;
+    private createWhitespaceLine;
     private render;
     calculateCanvasHeight(): number;
     addLetter({ letter, id, position, }: {
