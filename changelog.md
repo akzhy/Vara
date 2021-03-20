@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.0
+* Moved from svg to canvas
+* Uses typescript
+
 ## v1.2.0
 * Fixed issues with Safari
 
