@@ -561,18 +561,14 @@
         });
 
         line.text.forEach(function (letter) {
-          if (letter.isSpace) {
-            left += _this4.root.WHITESPACE;
-          } else {
-            var currentLetter = letter.getFontItem();
-            lineClass.addLetter({
-              x: left,
-              y: 0,
-              width: currentLetter.w,
-              character: letter
-            });
-            left += currentLetter.w;
-          }
+          var currentLetter = letter.getFontItem();
+          lineClass.addLetter({
+            x: left,
+            y: 0,
+            width: currentLetter.w,
+            character: letter
+          });
+          left += currentLetter.w;
         });
         top += _this4.options.lineHeight;
         _this4.height += _this4.options.lineHeight * scale;
@@ -696,6 +692,7 @@
           var line = letter.getParent('line', letter);
           var xPosition = line.x + (letter.x + letter.width) * this.scale;
           var yPosition = line.y;
+          console.log(yPosition);
           return {
             x: xPosition,
             y: yPosition
@@ -736,7 +733,6 @@
         fontItem: this.root.fontCharacters[letter.charCodeAt(0)] || this.root.fontCharacters['63'],
         isSpace: letter === ' '
       });
-      console.log(letter);
 
       if (typeof position === 'number') {
         var textCharCount = 0;
@@ -780,6 +776,7 @@
         this.text.forEach(function (textLine, index) {
           if (position <= textCharCount + textLine.length) {
             if (position <= textCharCount + textLine.length) {
+              console.log(position, textCharCount, index);
               charId = _this8.text[index][position - textCharCount].id;
 
               _this8.text[index].splice(position - textCharCount, 1);
@@ -1131,45 +1128,66 @@
       var letter = _ref.letter,
           id = _ref.id,
           position = _ref.position;
-      var block = this.blocks.find(function (item) {
-        return item.options.id === id;
-      });
-      console.log(letter);
-      block == null ? void 0 : block.addLetter({
-        letter: letter,
-        position: position
-      }); // if(block) {
-      //     block.
-      // }
+      var block = this.getBlock(id);
+
+      if (block) {
+        block.addLetter({
+          letter: letter,
+          position: position
+        });
+        return true;
+      } else {
+        console.warn("Block with id " + id + " not found");
+        return false;
+      }
     };
 
     _proto.removeLetter = function removeLetter(_ref2) {
       var id = _ref2.id,
           position = _ref2.position;
-      var block = this.blocks.find(function (item) {
-        return item.options.id === id;
-      });
-      block == null ? void 0 : block.removeLetter({
-        position: position
-      }); // if(block) {
-      //     block.
-      // }
+      var block = this.getBlock(id);
+
+      if (block) {
+        block.removeLetter({
+          position: position
+        });
+        return true;
+      } else {
+        console.warn("Block with id " + id + " not found");
+        return false;
+      }
     };
 
     _proto.getCursorPosition = function getCursorPosition(_ref3) {
       var position = _ref3.position,
           id = _ref3.id;
-      var block = this.blocks.find(function (item) {
-        return item.options.id === id;
-      });
-      return block == null ? void 0 : block.getCursorPosition(position);
+      var block = this.getBlock(id);
+
+      if (block) {
+        return block.getCursorPosition(position);
+      } else {
+        console.warn("Block with id " + id + " not found");
+        return false;
+      }
     };
 
     _proto.setRenderFunction = function setRenderFunction(id, fn) {
-      var block = this.blocks.find(function (item) {
+      var block = this.getBlock(id);
+
+      if (block) {
+        return block.setRenderFunction(fn);
+      } else {
+        console.warn("Block with id " + id + " not found");
+        return false;
+      }
+    };
+
+    _proto.getBlock = function getBlock(id) {
+      var _this$blocks$find;
+
+      return (_this$blocks$find = this.blocks.find(function (item) {
         return item.options.id === id;
-      });
-      return block == null ? void 0 : block.setRenderFunction(fn);
+      })) != null ? _this$blocks$find : false;
     }
     /**
      * Creates and returns an SVG element

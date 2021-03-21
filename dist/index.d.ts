@@ -51,19 +51,20 @@ export default class Vara {
         letter: string;
         id: string;
         position: number;
-    }): void;
+    }): boolean;
     removeLetter({ id, position }: {
         id: string;
         position: number;
-    }): void;
+    }): boolean;
     getCursorPosition({ position, id }: {
         position: number;
         id: string;
     }): false | {
         x: number;
         y: number;
-    } | undefined;
-    setRenderFunction(id: string, fn: (ctx: CanvasRenderingContext2D) => void): void | undefined;
+    };
+    setRenderFunction(id: string, fn: (ctx: CanvasRenderingContext2D) => void): false | void;
+    getBlock(id: string): false | Block;
     /**
      * Creates and returns an SVG element
      * @param n The name of the SVG node to be created

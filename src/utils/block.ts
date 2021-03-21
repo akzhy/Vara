@@ -176,20 +176,16 @@ export default class Block extends RenderBase {
             });
 
             line.text.forEach(letter => {
-                if (letter.isSpace) {
-                    left += this.root.WHITESPACE;
-                } else {
-                    const currentLetter = letter.getFontItem();
+                const currentLetter = letter.getFontItem();
 
-                    lineClass.addLetter({
-                        x: left,
-                        y: 0,
-                        width: currentLetter.w,
-                        character: letter,
-                    });
+                lineClass.addLetter({
+                    x: left,
+                    y: 0,
+                    width: currentLetter.w,
+                    character: letter,
+                });
 
-                    left += currentLetter.w;
-                }
+                left += currentLetter.w;
             });
             top += this.options.lineHeight;
             this.height += this.options.lineHeight * scale;
@@ -339,6 +335,7 @@ export default class Block extends RenderBase {
                 const xPosition =
                     line.x + (letter.x + letter.width) * this.scale;
                 const yPosition = line.y;
+                console.log(yPosition);
 
                 return {
                     x: xPosition,
@@ -386,8 +383,6 @@ export default class Block extends RenderBase {
             isSpace: letter === ' ',
         });
 
-        console.log(letter);
-
         if (typeof position === 'number') {
             let textCharCount = 0;
             this.text.forEach((textLine, index) => {
@@ -432,6 +427,7 @@ export default class Block extends RenderBase {
             this.text.forEach((textLine, index) => {
                 if (position <= textCharCount + textLine.length) {
                     if (position <= textCharCount + textLine.length) {
+                        console.log(position, textCharCount, index);
                         charId = this.text[index][position - textCharCount].id;
                         this.text[index].splice(position - textCharCount, 1);
                     } else {

@@ -265,32 +265,51 @@ export default class Vara {
         id: string;
         position: number;
     }) {
-        const block = this.blocks.find(item => item.options.id === id);
-        console.log(letter);
-        block?.addLetter({ letter, position });
-        // if(block) {
-        //     block.
-        // }
+        const block = this.getBlock(id);
+        if (block) {
+            block.addLetter({ letter, position });
+            return true;
+        } else {
+            console.warn(`Block with id ${id} not found`);
+            return false;
+        }
     }
 
     removeLetter({ id, position }: { id: string; position: number }) {
-        const block = this.blocks.find(item => item.options.id === id);
+        const block = this.getBlock(id);
 
-        block?.removeLetter({ position });
-        // if(block) {
-        //     block.
-        // }
+        if (block) {
+            block.removeLetter({ position });
+            return true;
+        } else {
+            console.warn(`Block with id ${id} not found`);
+            return false;
+        }
     }
 
     getCursorPosition({ position, id }: { position: number; id: string }) {
-        const block = this.blocks.find(item => item.options.id === id);
+        const block = this.getBlock(id);
 
-        return block?.getCursorPosition(position);
+        if (block) {
+            return block.getCursorPosition(position);
+        } else {
+            console.warn(`Block with id ${id} not found`);
+            return false;
+        }
     }
 
     setRenderFunction(id: string, fn: (ctx: CanvasRenderingContext2D) => void) {
-        const block = this.blocks.find(item => item.options.id === id);
-        return block?.setRenderFunction(fn);
+        const block = this.getBlock(id);
+        if (block) {
+            return block.setRenderFunction(fn);
+        } else {
+            console.warn(`Block with id ${id} not found`);
+            return false;
+        }
+    }
+
+    getBlock(id: string) {
+        return this.blocks.find(item => item.options.id === id) ?? false;
     }
 
     /**

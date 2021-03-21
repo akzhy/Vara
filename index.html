@@ -48,17 +48,27 @@
                 }
             );
 
+            let block = false;
+
             const renderFunction = (ctx, rafTime) => {
                 ctx.beginPath();
                 ctx.fillStyle = cursorData.color;
-                ctx.rect(cursorData.x + 10, cursorData.y, 4, 40);
+                ctx.rect(cursorData.x + 10, cursorData.y - 40, 4, 40);
                 ctx.fill();
 
-                if(rafTime > cursorData.prevTime+500) {
-                    if(cursorData.color === "#000") {
-                        cursorData.color = "transparent";
+                if (!block) {
+                    block = vara.getBlock('modify');
+                }
+
+                ctx.beginPath();
+                ctx.rect(1, 0, block.width - 2, block.height);
+                ctx.stroke();
+
+                if (rafTime > cursorData.prevTime + 500) {
+                    if (cursorData.color === '#000') {
+                        cursorData.color = 'transparent';
                     } else {
-                        cursorData.color = "#000";
+                        cursorData.color = '#000';
                     }
                     cursorData.prevTime = rafTime;
                 }
@@ -72,25 +82,31 @@
             input.addEventListener('keydown', function(e) {
                 if (e.which === 8) {
                     vara.removeLetter({
-                        position: input.value.length,
+                        position: input.value.length - 1,
                         id: 'modify',
                     });
+                    cursorData = {
+                        ...cursorData,
+                        ...vara.getCursorPosition({
+                            id: 'modify',
+                            position: input.value.length - 2,
+                        }),
+                    };
                 } else {
-                    if(e.key.length === 1) {;
+                    if (e.key.length === 1) {
                         vara.addLetter({
                             letter: e.key,
                             id: 'modify',
                             position: input.value.length,
                         });
+                        cursorData = {
+                            ...cursorData,
+                            ...vara.getCursorPosition({
+                                id: 'modify',
+                                position: input.value.length,
+                            }),
+                        };
                     }
-                    // console.log(input.value[input.value.length - 1]);
-                    cursorData = {
-                        ...cursorData,
-                        ...vara.getCursorPosition({
-                            id: 'modify',
-                            position: input.value.length,
-                        }),
-                    };
                 }
             });
         </script>
