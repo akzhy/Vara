@@ -19,6 +19,7 @@ let lineId = 0;
 export default class Line extends RenderBase {
     x: number;
     y: number;
+    width: number;
     letters: Letter[];
     drawnLetters: Letter[];
     id: number;
@@ -40,6 +41,8 @@ export default class Line extends RenderBase {
         // The name of this class.
         // Name is used for finding a specific parent using the getParent method
         this.name = 'line';
+
+        this.width = 0;
 
         this.id = lineId;
         lineId++;
@@ -73,6 +76,7 @@ export default class Line extends RenderBase {
             });
         });
 
+        this.width += letter.width;
         this.letters.push(newLetter);
 
         // Return the newly created letter
