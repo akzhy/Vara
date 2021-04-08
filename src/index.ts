@@ -38,8 +38,8 @@ export default class Vara {
     onDrawF?: () => void;
     private readyfn?: () => void;
 
-    WHITESPACE: number;
-    SCALEBASE: number;
+    whitespace: number;
+    scalebase: number;
 
     constructor(
         elem: string,
@@ -107,8 +107,8 @@ export default class Vara {
         this.canvas.height = 800;
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         this.element.appendChild(this.canvas);
-        this.WHITESPACE = 10;
-        this.SCALEBASE = 16;
+        this.whitespace = 10;
+        this.scalebase = 16;
 
         this.contextHeight = 0;
 
@@ -126,9 +126,6 @@ export default class Vara {
                     const contents = JSON.parse(xmlhttp.responseText);
                     this.fontCharacters = contents.c;
                     this.fontProperties = contents.p;
-                    if (this.fontCharacters['32'] === undefined) {
-                        this.createWhitespaceLine();
-                    }
                     this.preRender();
                     if (this.readyfn) this.readyfn();
                     this.render();
@@ -171,6 +168,7 @@ export default class Vara {
      * Performs some actions before rendering starts. These include finding the pathLength of each path and generating the render data.
      */
     private preRender() {
+        // TODO: Cleanup all appended elements
         let svg = this.createSVGNode('svg', {
             width: '100',
             height: '100',
@@ -185,6 +183,13 @@ export default class Vara {
             d: '',
         }) as SVGPathElement;
         svg.appendChild(svgPathData);
+
+        this.setScaleBase();
+        this.setWhitespaceWidth();
+
+        if (this.fontCharacters['32'] === undefined) {
+            this.createWhitespaceLine();
+        }
 
         this.objectKeys(this.fontCharacters).forEach(char => {
             this.fontCharacters[char].paths.forEach((path, i) => {
@@ -213,7 +218,7 @@ export default class Vara {
     }
 
     private createWhitespaceLine() {
-        const path = `m0,0 l0,0 ${this.WHITESPACE},0`;
+        const path = `m0,0 l0,0 ${this.whitespace},0`;
         const fontItem: VaraFontItem = {
             paths: [
                 {
@@ -222,11 +227,11 @@ export default class Vara {
                     h: 1,
                     mx: 0,
                     my: 0,
-                    pl: this.WHITESPACE,
-                    w: this.WHITESPACE,
+                    pl: this.whitespace,
+                    w: this.whitespace,
                 },
             ],
-            w: this.WHITESPACE,
+            w: this.whitespace,
         };
         this.fontCharacters['32'] = fontItem;
     }
@@ -329,6 +334,36 @@ export default class Vara {
                 v[p]
             );
         return e;
+    }
+
+    private setScaleBase() {
+        const charCode = this.fontCharacters['97']
+            ? '97'
+            : Object.keys(this.fontCharacters)[0];
+        const psuedoText = this.fontCharacters[charCode];
+
+        const psuedoTextElement = document.createElement('span');
+        psuedoTextElement.setAttribute('style', 'position:absolute;opacity:0;');
+        psuedoTextElement.textContent = String.fromCharCode(parseInt(charCode));
+
+        this.element.appendChild(psuedoTextElement);
+
+        const psuedoTextElementWidth = psuedoTextElement.clientWidth;
+        this.scalebase = psuedoTextElementWidth / psuedoText.w;
+        console.log(psuedoTextElementWidth, psuedoText.w);
+
+        this.element.removeChild(psuedoTextElement);
+    }
+
+    private setWhitespaceWidth() {
+        const psuedoTextElement = document.createElement('span');
+        psuedoTextElement.setAttribute('style', 'position:absolute;opacity:0;');
+        psuedoTextElement.innerHTML = '&nbsp;';
+
+        this.element.appendChild(psuedoTextElement);
+        const psuedoTextElementWidth = psuedoTextElement.clientWidth;
+        this.whitespace = psuedoTextElementWidth / this.scalebase;
+        this.element.removeChild(psuedoTextElement);
     }
 
     /**

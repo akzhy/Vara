@@ -452,7 +452,7 @@
       _this.options = props.options;
       _this.name = 'block';
       _this.root = props.root;
-      _this.scale = props.options.fontSize / _this.root.SCALEBASE;
+      _this.scale = Math.min(1, props.options.fontSize / _this.root.scalebase);
 
       _this.userDefinedRenderFn = function () {
         return null;
@@ -498,14 +498,13 @@
     _proto.regeneratePositions = function regeneratePositions(lines) {
       var _this3 = this;
 
-      var scale = this.scale;
       this.height = 0;
       var top = this.options.lineHeight;
       var lettersToSetInLine = [];
       lines.forEach(function (line, lineIndex) {
         var left = 0;
         var x = 0,
-            y = top * _this3.scale;
+            y = top;
 
         if (_this3.options.textAlign === 'center') {
           x = (_this3.options.width - line.width) / 2;
@@ -517,7 +516,7 @@
         var lettersToSet = [];
         line.text.forEach(function (_char) {
           if (_char.isSpace) {
-            left += _this3.root.WHITESPACE;
+            left += _char.getFontItem().w;
           } else {
             var foundLetter = _this3.getLetterByCharacterId(_char.id);
 
@@ -533,7 +532,7 @@
           }
         });
         top += _this3.options.lineHeight;
-        _this3.height += _this3.options.lineHeight * scale;
+        _this3.height += _this3.options.lineHeight;
         lettersToSetInLine.push(lettersToSet);
       });
       this.getLines().forEach(function (line, lineIndex) {
@@ -544,7 +543,6 @@
     _proto.generatePositions = function generatePositions() {
       var _this4 = this;
 
-      var scale = this.scale;
       this.height = 0;
       var lines = this.generateLineData(this.text);
       var top = this.options.lineHeight;
@@ -573,14 +571,13 @@
           left += currentLetter.w;
         });
         top += _this4.options.lineHeight;
-        _this4.height += _this4.options.lineHeight * scale;
+        _this4.height += _this4.options.lineHeight;
       });
     };
 
     _proto.generateLineData = function generateLineData(lines) {
       var _this5 = this;
 
-      var scale = this.options.fontSize / this.root.SCALEBASE;
       var returnData = [{
         text: [],
         width: 0
@@ -608,7 +605,7 @@
             var pathPositionCorrection = currentLetter.paths.reduce(function (a, c) {
               return a + c.mx - c.dx;
             }, 0);
-            wordWidth += (currentLetter.w + pathPositionCorrection) * scale;
+            wordWidth += (currentLetter.w + pathPositionCorrection) * _this5.scale;
           });
           var spaceChar = new VaraChar({
             "char": ' ',
@@ -627,7 +624,7 @@
               text: [].concat(returnData[returnData.length - 1].text, word, [spaceChar]),
               width: returnData[returnData.length - 1].width + wordWidth
             };
-            spaceWidth += _this5.root.WHITESPACE * scale;
+            spaceWidth += spaceChar.getFontItem().w;
           }
         });
       });
@@ -694,7 +691,6 @@
           var line = letter.getParent('line', letter);
           var xPosition = line.x + (letter.x + letter.width) * this.scale;
           var yPosition = line.y;
-          console.log(yPosition);
           return {
             x: xPosition,
             y: yPosition
@@ -778,7 +774,6 @@
         this.text.forEach(function (textLine, index) {
           if (position <= textCharCount + textLine.length) {
             if (position <= textCharCount + textLine.length) {
-              console.log(position, textCharCount, index);
               charId = _this8.text[index][position - textCharCount].id;
 
               _this8.text[index].splice(position - textCharCount, 1);
@@ -979,8 +974,8 @@
       this.canvas.height = 800;
       this.ctx = this.canvas.getContext('2d');
       this.element.appendChild(this.canvas);
-      this.WHITESPACE = 10;
-      this.SCALEBASE = 16;
+      this.whitespace = 10;
+      this.scalebase = 16;
       this.contextHeight = 0;
       this.init();
     }
@@ -1000,10 +995,6 @@
             var contents = JSON.parse(xmlhttp.responseText);
             _this.fontCharacters = contents.c;
             _this.fontProperties = contents.p;
-
-            if (_this.fontCharacters['32'] === undefined) {
-              _this.createWhitespaceLine();
-            }
 
             _this.preRender();
 
@@ -1049,6 +1040,7 @@
     _proto.preRender = function preRender() {
       var _this3 = this;
 
+      // TODO: Cleanup all appended elements
       var svg = this.createSVGNode('svg', {
         width: '100',
         height: '100'
@@ -1062,6 +1054,13 @@
         d: ''
       });
       svg.appendChild(svgPathData);
+      this.setScaleBase();
+      this.setWhitespaceWidth();
+
+      if (this.fontCharacters['32'] === undefined) {
+        this.createWhitespaceLine();
+      }
+
       this.objectKeys(this.fontCharacters).forEach(function (_char) {
         _this3.fontCharacters[_char].paths.forEach(function (path, i) {
           svgPathData.setAttributeNS(null, 'd', path.d);
@@ -1081,7 +1080,7 @@
     };
 
     _proto.createWhitespaceLine = function createWhitespaceLine() {
-      var path = "m0,0 l0,0 " + this.WHITESPACE + ",0";
+      var path = "m0,0 l0,0 " + this.whitespace + ",0";
       var fontItem = {
         paths: [{
           d: path,
@@ -1089,10 +1088,10 @@
           h: 1,
           mx: 0,
           my: 0,
-          pl: this.WHITESPACE,
-          w: this.WHITESPACE
+          pl: this.whitespace,
+          w: this.whitespace
         }],
-        w: this.WHITESPACE
+        w: this.whitespace
       };
       this.fontCharacters['32'] = fontItem;
     };
@@ -1212,6 +1211,29 @@
       }
 
       return e;
+    };
+
+    _proto.setScaleBase = function setScaleBase() {
+      var charCode = this.fontCharacters['97'] ? '97' : Object.keys(this.fontCharacters)[0];
+      var psuedoText = this.fontCharacters[charCode];
+      var psuedoTextElement = document.createElement('span');
+      psuedoTextElement.setAttribute('style', 'position:absolute;opacity:0;');
+      psuedoTextElement.textContent = String.fromCharCode(parseInt(charCode));
+      this.element.appendChild(psuedoTextElement);
+      var psuedoTextElementWidth = psuedoTextElement.clientWidth;
+      this.scalebase = psuedoTextElementWidth / psuedoText.w;
+      console.log(psuedoTextElementWidth, psuedoText.w);
+      this.element.removeChild(psuedoTextElement);
+    };
+
+    _proto.setWhitespaceWidth = function setWhitespaceWidth() {
+      var psuedoTextElement = document.createElement('span');
+      psuedoTextElement.setAttribute('style', 'position:absolute;opacity:0;');
+      psuedoTextElement.innerHTML = '&nbsp;';
+      this.element.appendChild(psuedoTextElement);
+      var psuedoTextElementWidth = psuedoTextElement.clientWidth;
+      this.whitespace = psuedoTextElementWidth / this.scalebase;
+      this.element.removeChild(psuedoTextElement);
     }
     /**
      * Modifies the move to command of a given path and returns it.

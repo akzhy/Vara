@@ -53,7 +53,7 @@ export default class Block extends RenderBase {
         this.name = 'block';
 
         this.root = props.root;
-        this.scale = props.options.fontSize / this.root.SCALEBASE;
+        this.scale = Math.min(1, props.options.fontSize / this.root.scalebase);
 
         this.userDefinedRenderFn = () => null;
 
@@ -105,7 +105,6 @@ export default class Block extends RenderBase {
             width: number;
         }[]
     ) {
-        let scale = this.scale;
         this.height = 0;
 
         let top = this.options.lineHeight;
@@ -115,7 +114,7 @@ export default class Block extends RenderBase {
         lines.forEach((line, lineIndex) => {
             let left = 0;
             let x = 0,
-                y = top * this.scale;
+                y = top;
             if (this.options.textAlign === 'center') {
                 x = (this.options.width - line.width) / 2;
             }
@@ -127,7 +126,7 @@ export default class Block extends RenderBase {
 
             line.text.forEach(char => {
                 if (char.isSpace) {
-                    left += this.root.WHITESPACE;
+                    left += char.getFontItem().w;
                 } else {
                     let foundLetter = this.getLetterByCharacterId(char.id);
                     if (foundLetter) {
@@ -145,7 +144,7 @@ export default class Block extends RenderBase {
                 }
             });
             top += this.options.lineHeight;
-            this.height += this.options.lineHeight * scale;
+            this.height += this.options.lineHeight;
 
             lettersToSetInLine.push(lettersToSet);
         });
@@ -156,7 +155,6 @@ export default class Block extends RenderBase {
     }
 
     private generatePositions() {
-        let scale = this.scale;
         this.height = 0;
 
         const lines = this.generateLineData(this.text);
@@ -188,13 +186,11 @@ export default class Block extends RenderBase {
                 left += currentLetter.w;
             });
             top += this.options.lineHeight;
-            this.height += this.options.lineHeight * scale;
+            this.height += this.options.lineHeight;
         });
     }
 
     private generateLineData(lines: VaraChar[][]) {
-        let scale = this.options.fontSize / this.root.SCALEBASE;
-
         const returnData: {
             text: VaraChar[];
             width: number;
@@ -232,7 +228,7 @@ export default class Block extends RenderBase {
                         0
                     );
                     wordWidth +=
-                        (currentLetter.w + pathPositionCorrection) * scale;
+                        (currentLetter.w + pathPositionCorrection) * this.scale;
                 });
 
                 const spaceChar = new VaraChar({
@@ -263,7 +259,7 @@ export default class Block extends RenderBase {
                         width:
                             returnData[returnData.length - 1].width + wordWidth,
                     };
-                    spaceWidth += this.root.WHITESPACE * scale;
+                    spaceWidth += spaceChar.getFontItem().w;
                 }
             });
         });
@@ -335,7 +331,6 @@ export default class Block extends RenderBase {
                 const xPosition =
                     line.x + (letter.x + letter.width) * this.scale;
                 const yPosition = line.y;
-                console.log(yPosition);
 
                 return {
                     x: xPosition,
@@ -427,7 +422,6 @@ export default class Block extends RenderBase {
             this.text.forEach((textLine, index) => {
                 if (position <= textCharCount + textLine.length) {
                     if (position <= textCharCount + textLine.length) {
-                        console.log(position, textCharCount, index);
                         charId = this.text[index][position - textCharCount].id;
                         this.text[index].splice(position - textCharCount, 1);
                     } else {

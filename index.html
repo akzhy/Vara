@@ -28,18 +28,20 @@
                 y: 0,
             };
 
+            let animDuration = 400;
+
             var vara = new Vara(
                 '#container',
-                './fonts/Satisfy/SatisfySL.json',
+                './fonts/Just_Me_Again_Down_Here.json',
                 [
                     {
                         text: '',
-                        strokeWidth: 1.5,
+                        strokeWidth: 0.5,
                         y: 40,
                         x: 0,
                         duration: 2000,
                         textAlign: 'center',
-                        fontSize: 42,
+                        fontSize: 22,
                         id: 'modify',
                     },
                 ],
@@ -80,6 +82,9 @@
 
             const input = document.querySelector('#text');
             input.addEventListener('keydown', function(e) {
+                vara.getBlock('modify').updateOptions({
+                    duration: animDuration * input.value.length,
+                });
                 if (e.which === 8) {
                     vara.removeLetter({
                         position: input.value.length - 1,

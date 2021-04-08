@@ -29,8 +29,8 @@ export default class Vara {
     };
     onDrawF?: () => void;
     private readyfn?;
-    WHITESPACE: number;
-    SCALEBASE: number;
+    whitespace: number;
+    scalebase: number;
     constructor(elem: string, fontSource: string, text: VaraText[], options: VaraGeneralOptions);
     private init;
     ready(fn: () => void): void;
@@ -73,6 +73,8 @@ export default class Vara {
     createSVGNode(n: string, v: {
         [x: string]: string;
     }): SVGElement;
+    private setScaleBase;
+    private setWhitespaceWidth;
     /**
      * Modifies the move to command of a given path and returns it.
      * @param path The path "d" property
