@@ -298,6 +298,7 @@
       // Name is used for finding a specific parent using the getParent method
 
       _this.name = 'line';
+      _this.width = 0;
       _this.id = lineId;
       lineId++;
       return _this;
@@ -331,6 +332,7 @@
           width: path.w
         });
       });
+      this.width += letter.width;
       this.letters.push(newLetter); // Return the newly created letter
 
       return newLetter;
@@ -846,6 +848,10 @@
 
     _proto.setRenderFunction = function setRenderFunction(fn) {
       this.userDefinedRenderFn = fn;
+    };
+
+    _proto.updateOptions = function updateOptions(options) {
+      this.options = _extends({}, this.options, options);
     }
     /**
      * Remove the first line from the queue of lines. Used when a text line has been drawn completely.

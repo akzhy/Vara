@@ -14,6 +14,7 @@ export interface LineProps {
 export default class Line extends RenderBase {
     x: number;
     y: number;
+    width: number;
     letters: Letter[];
     drawnLetters: Letter[];
     id: number;

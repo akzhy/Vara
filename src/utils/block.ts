@@ -1,5 +1,5 @@
 import Vara from '..';
-import { BlockName, VaraText } from '../types';
+import { BlockName, VaraText, VaraTextOptions } from '../types';
 import VaraChar from './char';
 import Letter from './letter';
 import Line, { LineProps } from './line';
@@ -494,6 +494,13 @@ export default class Block extends RenderBase {
         fn: (ctx: CanvasRenderingContext2D, rafTime: number) => void
     ) {
         this.userDefinedRenderFn = fn;
+    }
+
+    updateOptions(options: VaraTextOptions) {
+        this.options = {
+            ...this.options,
+            ...options,
+        };
     }
 
     /**

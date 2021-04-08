@@ -1,5 +1,5 @@
 import Vara from '..';
-import { BlockName, VaraText } from '../types';
+import { BlockName, VaraText, VaraTextOptions } from '../types';
 import VaraChar from './char';
 import Letter from './letter';
 import Line, { LineProps } from './line';
@@ -54,6 +54,7 @@ export default class Block extends RenderBase {
     getLastLine(): Line;
     getLetterByCharacterId(id: number): false | Letter;
     setRenderFunction(fn: (ctx: CanvasRenderingContext2D, rafTime: number) => void): void;
+    updateOptions(options: VaraTextOptions): void;
     /**
      * Remove the first line from the queue of lines. Used when a text line has been drawn completely.
      *
