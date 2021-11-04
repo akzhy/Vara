@@ -1,8 +1,10 @@
 ![](vara.gif)
 # Vara 
-![](https://img.shields.io/badge/Vara.js-1.2.2-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg) [![Paypal Donate](https://img.shields.io/badge/Donate-paypal-9c27b0.svg)](https://www.paypal.me/akzhy/10)
+![](https://img.shields.io/badge/Vara.js-1.4.0-brightgreen.svg) ![](https://img.shields.io/badge/License-MIT-blue.svg) [![Paypal Donate](https://img.shields.io/badge/Donate-paypal-9c27b0.svg)](https://www.paypal.me/akzhy/10)
 
 Vara is a javascript library that can create text drawing animations
+
+> The 1.x version of Vara will soon be replaced with [v2](https://github.com/akzhy/Vara/tree/v2.0.0) which uses canvas instead of SVG and might cause breaking changes
 
 #### [Website](http://vara.akzhy.com) | [Examples](http://vara.akzhy.com/examples) | [Codepen 1](https://codepen.io/akzhy/pen/YdbYbj) | [Codepen 2](https://codepen.io/akzhy/pen/OrdYGO)
 
@@ -18,9 +20,9 @@ npm install vara --save
 Or download and include the library as follows
 
 ```html
-<script src="./src/vara.min.js" type="text/javascript"></script>
+<script src="./lib/vara.min.js" type="text/javascript"></script>
 <!-- Or jsdelivr -->
-<script src="https://cdn.jsdelivr.net/npm/vara@1.2.0/src/vara.min.js" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/vara@1.4.0/lib/vara.min.js" type="text/javascript"></script>
 ```
 ```javascript
 new Vara("#element","font.json",[{
@@ -42,6 +44,7 @@ The last argument is an object to provide the options like fontSize,color etc.
 ## Options
 
 ```javascript
+// https://cdn.jsdelivr.net/npm/vara@1.4.0/fonts/fontdir/fontname.json
 new Vara("#container","font.json",[
 {
 	text:"Hello World", // String, text to be shown
