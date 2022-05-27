@@ -508,7 +508,7 @@ Vara.prototype.analyseWidth = function () {
   var baseLetter =
     this.characters["97"] == undefined
       ? Object.keys(this.characters)[
-          Math.round(Math.random() * this.characters.length)
+          Math.round(Math.random() * Object.keys(this.characters).length - 1)
         ]
       : "97";
   var baseFont = document.createElement("span");
