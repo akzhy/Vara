@@ -24,6 +24,9 @@ Or download and include the library as follows
 <!-- Or jsdelivr -->
 <script src="https://cdn.jsdelivr.net/npm/vara@1.4.0/lib/vara.min.js" type="text/javascript"></script>
 ```
+
+Using URL:
+
 ```javascript
 new Vara("#element","font.json",[{
 	text:"Handwritten"
@@ -32,9 +35,19 @@ new Vara("#element","font.json",[{
 });
 ```
 
+Using JSON object:
+
+```javascript
+new Vara("#element",{"file": "json"},[{
+	text:"Handwritten"
+}],{
+	fontSize:46
+});
+```
+
 The first argument, #element is the container element for the SVG.
 
-The font used is a specially created JSON file that contains the information needed to create the text. It is included by passing the URL of the font as the second argument.
+The font used is a specially created JSON file that contains the information needed to create the text. It is included by passing the URL of the font as the second argument(Or you can directly pass the JSON object as a parameter, which is very convenient in Vue with import).
 A few custom fonts are available in the Github repository, more will be added soon. Creation of custom fonts are explained [here](http://vara.akzhy.com/creating-fonts).
 
 The third argument is an array of objects, where each object will represent a block of text to be drawn. The text to be drawn is passed as the text property.

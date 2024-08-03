@@ -59,19 +59,25 @@ Vara.prototype.createNode = function (n, v) {
  */
 Vara.prototype.getSVGData = function () {
   var _this = this;
-  var xmlhttp = new XMLHttpRequest();
-  xmlhttp.open("GET", this.fontSource, true);
-  xmlhttp.onreadystatechange = function () {
-    if (xmlhttp.readyState == 4) {
-      if (xmlhttp.status == 200) {
+  if (typeof this.fontSource == "string") {
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", this.fontSource, true);
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
         _this.contents = JSON.parse(xmlhttp.responseText);
         _this.characters = JSON.parse(xmlhttp.responseText).c;
         _this.preCreate();
         _this.createText();
       }
-    }
-  };
-  xmlhttp.send(null);
+    };
+    xmlhttp.send(null);
+  }
+  if (typeof this.fontSource == "object" && this.fontSource != null) {
+    _this.contents = this.fontSource;
+    _this.characters = this.fontSource.c;
+    _this.preCreate();
+    _this.createText();
+  }
 };
 
 /**
