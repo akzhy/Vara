@@ -431,8 +431,10 @@ Vara.prototype.draw = function (id, dur) {
   setTimeout(function () {
     _this.drawnCharacters[id].characters.forEach(function (i) {
       i.querySelectorAll("path").forEach(function (j) {
+        // iOS below 16.4 add "px" to strokeDashoffset, therefore making the returned value NaN
+        var pureStrokeDashoffset = ("" + j.style.strokeDashoffset + "").replace("px", "");
         var currentDuration =
-          (parseFloat(j.style.strokeDashoffset) / pathLength) * duration;
+          (parseFloat(pureStrokeDashoffset) / pathLength) * duration;
         j.style.opacity = 1;
         _this.animate(j, currentDuration, delay, 0);
         delay += currentDuration;
@@ -467,7 +469,9 @@ Vara.prototype.animate = function (elem, duration, delay, final) {
   final = Number(final) || 0;
   setTimeout(function () {
     var start = new Date().getTime();
-    var initial = parseFloat(elem.style.strokeDashoffset);
+    // iOS below 16.4 add "px" to strokeDashoffset, therefore making the returned value NaN
+    var pureStrokeDashoffset = ("" + elem.style.strokeDashoffset + "").replace("px", "");
+    var initial = parseFloat(pureStrokeDashoffset);
     var timer = setInterval(function () {
       var step = Math.min(1, (new Date().getTime() - start) / duration);
       var x = initial + step * (final - initial);
